@@ -11,15 +11,12 @@ an `UploadSet` object and upload your files to it.
 Note: originally from https://github.com/maxcountryman/flask-uploads
 """
 
+
 import sys
 
 PY3 = sys.version_info[0] == 3
 
-if PY3:
-    string_types = str,
-else:
-    string_types = basestring,
-
+string_types = (str, ) if PY3 else (basestring, )
 import os.path
 import posixpath
 
@@ -133,9 +130,7 @@ def lowercase_ext(filename):
 
 
 def addslash(url):
-    if url.endswith('/'):
-        return url
-    return url + '/'
+    return url if url.endswith('/') else f'{url}/'
 
 
 def patch_request_class(app, size=64 * 1024 * 1024):
@@ -192,24 +187,20 @@ def config_for_set(uset, app, defaults=None):
     if defaults is None:
         defaults = dict(dest=None, url=None)
 
-    allow_extns = tuple(config.get(prefix + 'ALLOW', ()))
-    deny_extns = tuple(config.get(prefix + 'DENY', ()))
-    destination = config.get(prefix + 'DEST')
-    base_url = config.get(prefix + 'URL')
+    allow_extns = tuple(config.get(f'{prefix}ALLOW', ()))
+    deny_extns = tuple(config.get(f'{prefix}DENY', ()))
+    destination = config.get(f'{prefix}DEST')
+    base_url = config.get(f'{prefix}URL')
 
-    if destination is None:
-        # the upload set's destination wasn't given
-        if uset.default_dest:
-            # use the "default_dest" callable
-            destination = uset.default_dest(app)
-        if destination is None: # still
-            # use the default dest from the config
-            if defaults['dest'] is not None:
-                using_defaults = True
-                destination = os.path.join(defaults['dest'], uset.name)
-            else:
-                 raise RuntimeError(f"no destination for set {uset.name}")
+    if destination is None and uset.default_dest:
+        # use the "default_dest" callable
+        destination = uset.default_dest(app)
+    if destination is None: # still
+        if defaults['dest'] is None:
+            raise RuntimeError(f"no destination for set {uset.name}")
 
+        using_defaults = True
+        destination = os.path.join(defaults['dest'], uset.name)
     if base_url is None and using_defaults and defaults['url']:
         base_url = addslash(defaults['url']) + uset.name + '/'
 
@@ -431,18 +422,12 @@ class UploadSet(object):
             folder, name = os.path.split(name)
 
         basename = self.get_basename(storage.filename)
-        
+
         if not self.file_allowed(storage, basename):
             raise UploadNotAllowed()
-        
+
         if name:
-            if name.endswith('.'):
-                basename = name + extension(basename)
-            else:
-                basename = name
-
-
-
+            basename = name + extension(basename) if name.endswith('.') else name
         if folder:
             target_folder = os.path.join(self.config.destination, folder)
         else:
@@ -454,10 +439,7 @@ class UploadSet(object):
 
         target = os.path.join(target_folder, basename)
         storage.save(target)
-        if folder:
-            return posixpath.join(folder, basename)
-        else:
-            return basename
+        return posixpath.join(folder, basename) if folder else basename
 
     def resolve_conflict(self, target_folder, basename):
         """
@@ -526,7 +508,4 @@ class TestingFileStorage(FileStorage):
         :param dst: The file to save to.
         :param buffer_size: Ignored.
         """
-        if isinstance(dst, string_types):
-            self.saved = dst
-        else:
-            self.saved = dst.name
+        self.saved = dst if isinstance(dst, string_types) else dst.name

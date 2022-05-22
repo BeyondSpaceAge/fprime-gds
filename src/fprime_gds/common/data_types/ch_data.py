@@ -76,10 +76,7 @@ class ChData(sys_data.SysData):
         Returns:
             The channel reading
         """
-        if self.val_obj is None:
-            return None
-        else:
-            return self.val_obj.val
+        return None if self.val_obj is None else self.val_obj.val
 
     def get_val_obj(self):
         """
@@ -103,10 +100,7 @@ class ChData(sys_data.SysData):
         Returns:
             Header for a csv file containing channel data
         """
-        if verbose:
-            return "Time,Raw Time,Name,ID,Value\n"
-        else:
-            return "Time,Name,Value\n"
+        return "Time,Raw Time,Name,ID,Value\n" if verbose else "Time,Name,Value\n"
 
     def get_str(self, time_zone=None, verbose=False, csv=False):
         """
@@ -141,7 +135,7 @@ class ChData(sys_data.SysData):
                 self.id,
                 ch_val,
             )
-        elif verbose and not csv:
+        elif verbose:
             return "%s: %s (%d) %s %s" % (
                 time_str_nice,
                 ch_name,
@@ -149,7 +143,7 @@ class ChData(sys_data.SysData):
                 raw_time_str,
                 ch_val,
             )
-        elif not verbose and csv:
+        elif csv:
             return f"{time_str_nice},{ch_name},{ch_val}"
         else:
             return f"{time_str_nice}: {ch_name} = {ch_val}"

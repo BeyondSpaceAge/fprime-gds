@@ -77,38 +77,7 @@ def generateSequence(inputFile, outputFile, dictionary, timebase, cont=False):
     try:
         for i, descriptor, seconds, useconds, mnemonic, args in parsed_seq:
             try:
-                # Make sure that command is in the command dictionary:
-                if mnemonic in cmd_name_dict:
-                    command_temp = copy.deepcopy(cmd_name_dict[mnemonic])
-                    # Set the command arguments:
-                    try:
-                        command_temp.setArgs(args)
-                    except ArgLengthMismatchException as e:
-                        raise SeqGenException(
-                            "Line %d: %s"
-                            % (
-                                i + 1,
-                                "'"
-                                + mnemonic
-                                + "' argument length mismatch. "
-                                + e.getMsg(),
-                            )
-                        )
-                    except TypeException as e:
-                        raise SeqGenException(
-                            "Line %d: %s"
-                            % (
-                                i + 1,
-                                "'" + mnemonic + "' argument type mismatch. " + e.getMsg(),
-                            )
-                        )
-                    # Set the command time and descriptor:
-                    command_temp.setDescriptor(descriptor)
-                    command_temp.setSeconds(seconds)
-                    command_temp.setUseconds(useconds)
-                    # Append this command to the command list:
-                    command_list.append(command_temp)
-                else:
+                if mnemonic not in cmd_name_dict:
                     raise SeqGenException(
                         "Line %d: %s"
                         % (
@@ -118,6 +87,35 @@ def generateSequence(inputFile, outputFile, dictionary, timebase, cont=False):
                             + "' does not match any command in the command dictionary.",
                         )
                     )
+                command_temp = copy.deepcopy(cmd_name_dict[mnemonic])
+                # Set the command arguments:
+                try:
+                    command_temp.setArgs(args)
+                except ArgLengthMismatchException as e:
+                    raise SeqGenException(
+                        "Line %d: %s"
+                        % (
+                            i + 1,
+                            "'"
+                            + mnemonic
+                            + "' argument length mismatch. "
+                            + e.getMsg(),
+                        )
+                    )
+                except TypeException as e:
+                    raise SeqGenException(
+                        "Line %d: %s"
+                        % (
+                            i + 1,
+                            "'" + mnemonic + "' argument type mismatch. " + e.getMsg(),
+                        )
+                    )
+                # Set the command time and descriptor:
+                command_temp.setDescriptor(descriptor)
+                command_temp.setSeconds(seconds)
+                command_temp.setUseconds(useconds)
+                # Append this command to the command list:
+                command_list.append(command_temp)
             except SeqGenException as exc:
                 if not cont:
                     raise

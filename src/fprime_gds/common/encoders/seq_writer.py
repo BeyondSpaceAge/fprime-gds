@@ -75,7 +75,7 @@ class SeqBinaryWriter:
 
         def __print(byteBuffer):
             print("Byte buffer size: %d" % len(byteBuffer))
-            for entry in range(0, len(byteBuffer)):
+            for entry in range(len(byteBuffer)):
                 print(
                     "Byte %d: 0x%02X (%c)"
                     % (
@@ -132,11 +132,7 @@ class SeqBinaryWriter:
         for cmd in seq_cmds_list:
             sequence += self.__binaryCmdRecord(cmd)
         size = len(sequence)
-        if self.__timebase == 0xFFFF:
-            tb_txt = b"ANY"
-        else:
-            tb_txt = bytes(self.__timebase)
-
+        tb_txt = b"ANY" if self.__timebase == 0xFFFF else bytes(self.__timebase)
         print("Sequence is %d bytes with timebase %s" % (size, tb_txt))
 
         header = b""

@@ -63,10 +63,7 @@ class TestHistory(History):
         Returns:
             a list of objects in chronological order
         """
-        if start is not None:
-            index = self.__get_index(start)
-        else:
-            index = 0
+        index = self.__get_index(start) if start is not None else 0
         self.retrieved_cursor = self.size()
         return self.objects[index:]
 
@@ -94,15 +91,9 @@ class TestHistory(History):
         Args:
             start: clear all objects before start. start can either be an index or a predicate.
         """
-        if start is not None:
-            index = self.__get_index(start)
-        else:
-            index = self.size()
-
+        index = self.__get_index(start) if start is not None else self.size()
         self.retrieved_cursor -= index
-        if self.retrieved_cursor < 0:
-            self.retrieved_cursor = 0
-
+        self.retrieved_cursor = max(self.retrieved_cursor, 0)
         del self.objects[:index]
 
     def size(self):
@@ -145,10 +136,9 @@ class TestHistory(History):
         Returns:
             the index in the given list that start refers to
         """
-        if predicates.is_predicate(start):
-            index = 0
-            while index < self.size() and not start(self.objects[index]):
-                index += 1
-            return index
-        else:
+        if not predicates.is_predicate(start):
             return start
+        index = 0
+        while index < self.size() and not start(self.objects[index]):
+            index += 1
+        return index

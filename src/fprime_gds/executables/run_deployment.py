@@ -43,12 +43,8 @@ def find_app(root: Path) -> Path:
         print(f"[ERROR] binary location {bin_dir} does not exist")
         sys.exit(-1)
 
-    files = []
-    for child in bin_dir.iterdir():
-        if child.is_file():
-            files.append(child)
-
-    if len(files) == 0:
+    files = [child for child in bin_dir.iterdir() if child.is_file()]
+    if not files:
         print(f"[ERROR] App not found in {bin_dir}")
         sys.exit(-1)
 
@@ -68,12 +64,13 @@ def find_dict(root: Path) -> Path:
         print(f"[ERROR] dictionary location {dict_dir} does not exist")
         sys.exit(-1)
 
-    files = []
-    for child in dict_dir.iterdir():
-        if child.is_file() and child.suffix == ".xml":
-            files.append(child)
+    files = [
+        child
+        for child in dict_dir.iterdir()
+        if child.is_file() and child.suffix == ".xml"
+    ]
 
-    if len(files) == 0:
+    if not files:
         print(f"[ERROR] No xml dictionary found in dictionary location {dict_dir}")
         sys.exit(-1)
 
@@ -93,10 +90,7 @@ def get_settings():
         return args
 
     root = None
-    if args.root_dir is not None:
-        root = Path(args.root_dir)
-    else:
-        root = get_artifacts_root()
+    root = get_artifacts_root() if args.root_dir is None else Path(args.root_dir)
     root = root / platform.system()
 
     if not args.noapp and args.app is None:
@@ -339,26 +333,23 @@ def main():
     # List of things to launch, in order.
     launchers = [launch_tts, launch_comm]
     # Add app, if possible
-    if settings.get("app", None) is not None and settings.get("adapter", "") == "ip":
-        launchers.append(launch_app)
-    elif settings.get("app", None) is not None:
-        print("[WARNING] App cannot be auto-launched without IP adapter")
+    if settings.get("app", None) is not None:
+        if settings.get("adapter", "") == "ip":
+            launchers.append(launch_app)
+        else:
+            print("[WARNING] App cannot be auto-launched without IP adapter")
 
     # Launch the desired GUI package
     gui = settings.get("gui", "none")
     if gui == "wx":
         launchers.append(launch_wx)
-    elif gui == "html" or gui == "none":
+    elif gui in ["html", "none"]:
         launchers.append(launch_html)
-    # elif gui == "none":
-    #    print("[WARNING] No GUI specified, running headless", file=sys.stderr)
     else:
         raise Exception(f'Invalid GUI specified: {settings["gui"]}')
     # Launch launchers and wait for the last app to finish
     try:
-        procs = []
-        for launcher in launchers:
-            procs.append(launcher(**settings))
+        procs = [launcher(**settings) for launcher in launchers]
         print("[INFO] F prime is now running. CTRL-C to shutdown all components.")
         procs[-1].wait()
     except KeyboardInterrupt:

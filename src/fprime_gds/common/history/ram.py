@@ -46,10 +46,8 @@ class RamHistory(History):
         :param start: return all objects newer than given start session key
         :return: a list of objects
         """
-        index = 0
         size = self.size()
-        if start is not None:
-            index = self.retrieved_cursors.get(start, size)
+        index = self.retrieved_cursors.get(start, size) if start is not None else 0
         with self.lock:
             objs = self.objects[index:size]
             self.retrieved_cursors[start] = size

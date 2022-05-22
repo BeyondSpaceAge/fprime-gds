@@ -185,7 +185,7 @@ class Uplinker:
                 ]:
                     framed = self.framer.frame(packet)
                     # Uplink handles synchronous retries
-                    for retry in range(0, Uplinker.RETRY_COUNT):
+                    for retry in range(Uplinker.RETRY_COUNT):
                         if self.adapter.write(framed):
                             self.loopback.add_loopback_frame(
                                 Uplinker.get_handshake(packet)
@@ -196,8 +196,6 @@ class Uplinker:
                             "Uplink failed to send %d bytes of data after %d retries",
                             len(framed), Uplinker.RETRY_COUNT 
                         )
-        # An OSError might occur during shutdown and is harmless. If we are not shutting down, this error should be
-        # propagated up the stack.
         except OSError:
             if self.running:
                 raise

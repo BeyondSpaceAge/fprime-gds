@@ -84,27 +84,17 @@ class TestLogger:
         self.worksheet = self.workbook.create_sheet()
         self.ws_saved = False
 
-        if time_format is None:
-            self.time_format = self.__time_fmt
-        else:
-            self.time_format = time_format
-
-        if font_name is None:
-            self.font_name = self.__font_name
-        else:
-            self.font_name = font_name
-
+        self.time_format = self.__time_fmt if time_format is None else time_format
+        self.font_name = self.__font_name if font_name is None else font_name
         timestring = datetime.datetime.fromtimestamp(self.start_time).strftime(
             self.time_format
         )
         self.worksheet.column_dimensions["A"].width = len(timestring) + 1
         self.worksheet.column_dimensions["D"].width = 120
-
-        top = []
         date_string = datetime.datetime.fromtimestamp(self.start_time).strftime(
             "%H:%M:%S.%f on %m/%d/%Y"
         )
-        top.append(self.__get_cell(f"Test began at {date_string}"))
+        top = [self.__get_cell(f"Test began at {date_string}")]
         self.worksheet.append(top)
 
         labels = ["Log Time", "Case ID", "Sender", "Message"]
@@ -191,7 +181,4 @@ class TestLogger:
         return cell
 
     def __get_ws_row(self, strings, color=None, style=None):
-        row = []
-        for string in strings:
-            row.append(self.__get_cell(string, color, style))
-        return row
+        return [self.__get_cell(string, color, style) for string in strings]

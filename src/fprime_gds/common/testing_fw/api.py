@@ -59,11 +59,7 @@ class IntegrationTestAPI(DataHandler):
         self.latest_time = TimeType()
 
         # Initialize the logger
-        if logpath is not None:
-            self.logger = TestLogger(logpath)
-        else:
-            self.logger = None
-
+        self.logger = TestLogger(logpath) if logpath is not None else None
         # A predicate used as a filter to choose which events to log automatically
         self.event_log_filter = self.get_event_pred()
         self.pipeline.coders.register_event_consumer(self)
@@ -189,13 +185,11 @@ class IntegrationTestAPI(DataHandler):
             t_pred = predicates.telemetry_predicate(time_pred=time_pred)
             self.telemetry_history.clear(t_pred)
             msg = f"Clearing Test Histories after {time_stamp}"
-            self.__log(msg, TestLogger.WHITE)
         else:
             self.event_history.clear()
             self.telemetry_history.clear()
             msg = "Clearing Test Histories"
-            self.__log(msg, TestLogger.WHITE)
-
+        self.__log(msg, TestLogger.WHITE)
         self.command_history.clear()
 
     def set_event_log_filter(
@@ -324,16 +318,13 @@ class IntegrationTestAPI(DataHandler):
             cmd_dict = self.pipeline.dictionaries.command_name
             if command in cmd_dict:
                 return cmd_dict[command].get_id()
-            else:
-                msg = f"The command mnemonic, {command}, wasn't in the dictionary"
-                raise KeyError(msg)
+            msg = f"The command mnemonic, {command}, wasn't in the dictionary"
         else:
             cmd_dict = self.pipeline.dictionaries.command_id
             if command in cmd_dict:
                 return command
-            else:
-                msg = f"The command id, {command}, wasn't in the dictionary"
-                raise KeyError(msg)
+            msg = f"The command id, {command}, wasn't in the dictionary"
+        raise KeyError(msg)
 
     def send_command(self, command, args=None):
         """
@@ -484,16 +475,12 @@ class IntegrationTestAPI(DataHandler):
             ch_dict = self.pipeline.dictionaries.channel_name
             if channel in ch_dict:
                 return ch_dict[channel].get_id()
-            else:
-                msg = f"The telemetry mnemonic, {channel}, wasn't in the dictionary"
-                raise KeyError(msg)
         else:
             ch_dict = self.pipeline.dictionaries.channel_id
             if channel in ch_dict:
                 return channel
-            else:
-                msg = f"The telemetry mnemonic, {channel}, wasn't in the dictionary"
-                raise KeyError(msg)
+        msg = f"The telemetry mnemonic, {channel}, wasn't in the dictionary"
+        raise KeyError(msg)
 
     def get_telemetry_pred(self, channel=None, value=None, time_pred=None):
         """
@@ -568,10 +555,7 @@ class IntegrationTestAPI(DataHandler):
         Returns:
             an ordered list of ChData objects that satisfies the sequence
         """
-        seq_preds = []
-        for channel in channels:
-            seq_preds.append(self.get_telemetry_pred(channel))
-
+        seq_preds = [self.get_telemetry_pred(channel) for channel in channels]
         if history is None:
             history = self.get_telemetry_test_history()
 
@@ -600,9 +584,7 @@ class IntegrationTestAPI(DataHandler):
         if channels is None:
             search = None
         elif isinstance(channels, list):
-            t_preds = []
-            for channel in channels:
-                t_preds.append(self.get_telemetry_pred(channel=channel))
+            t_preds = [self.get_telemetry_pred(channel=channel) for channel in channels]
             search = predicates.satisfies_any(t_preds)
         else:
             search = self.get_telemetry_pred(channel=channels)
@@ -707,16 +689,13 @@ class IntegrationTestAPI(DataHandler):
             event_dict = self.pipeline.dictionaries.event_name
             if event in event_dict:
                 return event_dict[event].get_id()
-            else:
-                msg = f"The event mnemonic, {event}, wasn't in the dictionary"
-                raise KeyError(msg)
+            msg = f"The event mnemonic, {event}, wasn't in the dictionary"
         else:
             event_dict = self.pipeline.dictionaries.event_id
             if event in event_dict:
                 return event
-            else:
-                msg = f"The event id, {event}, wasn't in the dictionary"
-                raise KeyError(msg)
+            msg = f"The event id, {event}, wasn't in the dictionary"
+        raise KeyError(msg)
 
     def get_event_pred(self, event=None, args=None, severity=None, time_pred=None):
         """
@@ -805,10 +784,7 @@ class IntegrationTestAPI(DataHandler):
         Returns:
             an ordered list of EventData objects that satisfies the sequence
         """
-        seq_preds = []
-        for event in events:
-            seq_preds.append(self.get_event_pred(event))
-
+        seq_preds = [self.get_event_pred(event) for event in events]
         if history is None:
             history = self.get_event_test_history()
 
@@ -837,9 +813,7 @@ class IntegrationTestAPI(DataHandler):
         if events is None:
             search = None
         elif isinstance(events, list):
-            e_preds = []
-            for event in events:
-                e_preds.append(self.get_event_pred(event=event))
+            e_preds = [self.get_event_pred(event=event) for event in events]
             search = predicates.satisfies_any(e_preds)
         else:
             search = self.get_event_pred(event=events)
@@ -1075,10 +1049,7 @@ class IntegrationTestAPI(DataHandler):
                 self.log(msg, TestLogger.YELLOW)
 
             def search_current_history(self, items):
-                for item in items:
-                    if self.incremental_search(item):
-                        return True
-                return False
+                return any(self.incremental_search(item) for item in items)
 
             def incremental_search(self, item):
                 if self.search_pred(item):
@@ -1127,10 +1098,7 @@ class IntegrationTestAPI(DataHandler):
                     self.log(msg, TestLogger.YELLOW)
                     return True
 
-                for item in items:
-                    if self.incremental_search(item):
-                        return True
-                return False
+                return any(self.incremental_search(item) for item in items)
 
             def incremental_search(self, item):
                 if self.seq_preds[0](item):
@@ -1254,8 +1222,6 @@ class IntegrationTestAPI(DataHandler):
         if predicate(value):
             ast_msg = f"{name} succeeded: {msg}\nassert {pred_msg}"
             self.__log(ast_msg, TestLogger.GREEN)
-            if not expect:
-                assert True, pred_msg
             return True
         else:
             ast_msg = f"{name} failed: {msg}\nassert {pred_msg}"
@@ -1276,7 +1242,8 @@ class IntegrationTestAPI(DataHandler):
             msg = f"Received EVR: {data.get_str(verbose=True)}"
             self.__log(msg, TestLogger.BLUE, sender="GDS")
         if self.last_evr is not None and data.get_time() < self.last_evr.get_time():
-            msg = "API detected out of order evrs!" + f"\nReceived First:{self.last_evr.get_str(verbose=True)}"
+            msg = f"API detected out of order evrs!\nReceived First:{self.last_evr.get_str(verbose=True)}"
+
             msg += f"\nReceived Second:{data.get_str(verbose=True)}"
             self.__log(msg, TestLogger.ORANGE)
         self.last_evr = data
