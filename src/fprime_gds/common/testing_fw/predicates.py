@@ -49,9 +49,8 @@ def is_predicate(pred):
     if callable(pred):
         sig = signature(pred.__call__)
         arg_count = len(sig.parameters)
-        if arg_count == 1:
-            if hasattr(pred, "__str__"):
-                return True
+        if arg_count == 1 and hasattr(pred, "__str__"):
+            return True
     return False
 
 
@@ -355,10 +354,7 @@ class satisfies_all(predicate):
         This predicate can be used like an AND gate of N elements when combining predicates.
         :param pred_list: a list of predicates
         """
-        self.p_list = []
-        for pred in pred_list:
-            if is_predicate(pred):
-                self.p_list.append(pred)
+        self.p_list = [pred for pred in pred_list if is_predicate(pred)]
 
     def __call__(self, item):
         """
@@ -381,10 +377,7 @@ class satisfies_any(predicate):
         This predicate can be used like an OR gate of N elements when combining predicates.
         :param pred_list: a list of predicates
         """
-        self.p_list = []
-        for pred in pred_list:
-            if is_predicate(pred):
-                self.p_list.append(pred)
+        self.p_list = [pred for pred in pred_list if is_predicate(pred)]
 
     def __call__(self, item):
         """
@@ -433,10 +426,7 @@ class args_predicate(predicate):
             actual = [actual]
         if len(actual) != len(self.arg_spec):
             return False
-        for i in range(len(self.arg_spec)):
-            if not self.arg_spec[i](actual[i]):
-                return False
-        return True
+        return all(self.arg_spec[i](actual[i]) for i in range(len(self.arg_spec)))
 
     def __str__(self):
         """
@@ -486,14 +476,14 @@ class event_predicate(predicate):
         """
         if not isinstance(event, EventData):
             return False
-        if self.id_pred(event.get_id()):
-            if self.time_pred(event.get_time()):
-                if self.severity_pred(event.get_severity()):
-                    args = []
-                    for arg in event.get_args():
-                        args.append(arg.val)
-                    if self.args_pred(args):
-                        return True
+        if (
+            self.id_pred(event.get_id())
+            and self.time_pred(event.get_time())
+            and self.severity_pred(event.get_severity())
+        ):
+            args = [arg.val for arg in event.get_args()]
+            if self.args_pred(args):
+                return True
         return False
 
     def __str__(self):
@@ -547,10 +537,12 @@ class telemetry_predicate(predicate):
         """
         if not isinstance(telemetry, ChData):
             return False
-        if self.id_pred(telemetry.get_id()):
-            if self.value_pred(telemetry.get_val()):
-                if self.time_pred(telemetry.get_time()):
-                    return True
+        if (
+            self.id_pred(telemetry.get_id())
+            and self.value_pred(telemetry.get_val())
+            and self.time_pred(telemetry.get_time())
+        ):
+            return True
         return False
 
     def __str__(self):

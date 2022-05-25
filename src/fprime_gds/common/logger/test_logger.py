@@ -93,11 +93,10 @@ class TestLogger:
         self.worksheet.column_dimensions["A"].width = len(timestring) + 1
         self.worksheet.column_dimensions["D"].width = 120
 
-        top = []
         date_string = datetime.datetime.fromtimestamp(self.start_time).strftime(
             "%H:%M:%S.%f on %m/%d/%Y"
         )
-        top.append(self.__get_cell(f"Test began at {date_string}"))
+        top = [self.__get_cell(f"Test began at {date_string}")]
         self.worksheet.append(top)
 
         labels = ["Log Time", "Case ID", "Sender", "Message"]
@@ -184,7 +183,4 @@ class TestLogger:
         return cell
 
     def __get_ws_row(self, strings, color=None, style=None):
-        row = []
-        for string in strings:
-            row.append(self.__get_cell(string, color, style))
-        return row
+        return [self.__get_cell(string, color, style) for string in strings]
