@@ -58,6 +58,8 @@ class IpAdapter(fprime_gds.common.communication.adapters.base.BaseAdapter):
         Initialize this adapter by creating a handler for UDP and TCP. A thread for the KEEPALIVE application packets
         will be created, if the interval is not none.
         """
+        self.address = address
+        self.port = port
         self.stop = False
         self.keepalive = None
         self.tcp = TcpHandler(address, port)
@@ -67,6 +69,10 @@ class IpAdapter(fprime_gds.common.communication.adapters.base.BaseAdapter):
         self.data_chunks = queue.Queue()
         self.blob = b""
 
+    def __repr__(self):
+        """ String representation for logging """
+        return f"Paired-TCP/UDP@{self.address}:{self.port}"
+
     def open(self):
         """
         Open up the interface to the stored Address and Port. This will create a TCP and UDP socket. The TCP socket will
@@ -75,16 +81,16 @@ class IpAdapter(fprime_gds.common.communication.adapters.base.BaseAdapter):
         # Keep alive thread
         try:
             # Setup the tcp and udp adapter and run a thread to service them
-            self.thtcp = threading.Thread(target=self.th_handler, args=(self.tcp,))
+            self.thtcp = threading.Thread(target=self.th_handler, name="TcpCommThread", args=(self.tcp,))
             self.thtcp.daemon = True
             self.thtcp.start()
-            self.thudp = threading.Thread(target=self.th_handler, args=(self.udp,))
+            self.thudp = threading.Thread(target=self.th_handler, name="UdpCommThread", args=(self.udp,))
             self.thudp.daemon = True
             self.thudp.start()
             # Start up a keep-alive ping if desired. This will hit the TCP uplink, and die if the connection is down
             if IpAdapter.KEEPALIVE_INTERVAL is not None:
                 self.keepalive = threading.Thread(
-                    target=self.th_alive, args=[float(self.KEEPALIVE_INTERVAL)]
+                    target=self.th_alive, name="KeepCommAliveThread", args=[float(self.KEEPALIVE_INTERVAL)]
                 )
                 self.keepalive.start()
         except (ValueError, TypeError) as exc:
@@ -268,7 +274,7 @@ class IpHandler(abc.ABC):
 
     @abc.abstractmethod
     def open_impl(self):
-        """ Implementation of the handler's open call"""
+        """Implementation of the handler's open call"""
 
     def close(self):
         """
@@ -283,10 +289,10 @@ class IpHandler(abc.ABC):
 
     @abc.abstractmethod
     def close_impl(self):
-        """ Implementation of the handler's close call"""
+        """Implementation of the handler's close call"""
 
     def stop(self):
-        """ Stop the handler from reconnecting and close"""
+        """Stop the handler from reconnecting and close"""
         self.running = False
         self.close()
 
@@ -313,7 +319,7 @@ class IpHandler(abc.ABC):
 
     @abc.abstractmethod
     def read_impl(self):
-        """ Implementation of the handler's read call"""
+        """Implementation of the handler's read call"""
 
     def write(self, message):
         """
@@ -335,11 +341,11 @@ class IpHandler(abc.ABC):
 
     @abc.abstractmethod
     def write_impl(self, message):
-        """ Implementation of the handler's write call"""
+        """Implementation of the handler's write call"""
 
     @staticmethod
     def kill_socket(sock):
-        """ Kills a socket connection, but shutting it down and then closing. """
+        """Kills a socket connection, but shutting it down and then closing."""
         if sock is None:
             return
         try:
@@ -396,7 +402,6 @@ class TcpHandler(IpHandler):
         finally:
             self.client = None
             self.client_address = None
-
 
     def read_impl(self):
         """

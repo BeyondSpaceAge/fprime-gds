@@ -28,6 +28,10 @@ import fprime_gds.common.handlers
 LOGGER = logging.getLogger("decoder")
 
 
+class DecodingException(Exception):
+    """ Decoding Exception """
+
+
 class Decoder(
     fprime_gds.common.handlers.DataHandler,
     fprime_gds.common.handlers.HandlerRegistrar,
@@ -46,7 +50,14 @@ class Decoder(
         :param data: data bytes to be decoded
         :param sender: (optional) sender id, otherwise None
         """
-        decoded = self.decode_api(data)
+        try:
+            decoded = self.decode_api(data)
+        # Items already of DecodingException type should be reraised as-is
+        except DecodingException:
+            raise
+        # Convert other exceptions into known DecodingException type
+        except Exception as exc:
+            raise DecodingException(str(exc))
         if decoded is not None:
             self.send_to_all(decoded)
             return

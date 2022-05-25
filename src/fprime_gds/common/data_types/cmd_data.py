@@ -9,9 +9,6 @@ argument values.
 
 @bug No known bugs
 """
-
-from copy import deepcopy
-
 from fprime.common.models.serialize.array_type import ArrayType
 from fprime.common.models.serialize.bool_type import BoolType
 from fprime.common.models.serialize.enum_type import EnumType
@@ -36,16 +33,17 @@ from fprime_gds.common.data_types import sys_data
 class CmdData(sys_data.SysData):
     """The CmdData class stores a specific command"""
 
-    def __init__(self, cmd_args, cmd_temp, cmd_time=None):
+    def __init__(self, cmd_args, cmd_temp, cmd_desc=None, cmd_time=None):
         """
         Constructor.
 
         Args:
-            cmd_args: The arguments for the event. Should match the types of the
+            cmd_args: The arguments for the command. Should match the types of the
                       arguments in the cmd_temp object. Should be a tuple.
             cmd_temp: Command Template instance for this command (this provides
                       the opcode and argument types are stored)
-            cmd_time: The time the event should occur. This is for sequences.
+            cmd_desc: command descriptor: Absolute/Relative. For sequences
+            cmd_time: The time the command should occur. This is for sequences.
                       Should be a TimeType object with time base=TB_DONT_CARE
 
         Returns:
@@ -54,27 +52,11 @@ class CmdData(sys_data.SysData):
         super().__init__()
         self.id = cmd_temp.get_id()
         self.template = cmd_temp
-        self.arg_vals = cmd_args
 
-        self.args = [deepcopy(typ) for (_, _, typ) in self.template.arguments]
-        self.arg_names = [name for (name, _, _) in self.template.arguments]
+        self.args, errors = self.process_args(cmd_args)
+        self.time = cmd_time if cmd_time else TimeType(TimeBase["TB_DONT_CARE"].value)
+        self.descriptor = cmd_desc
 
-        if cmd_time:
-            self.time = cmd_time
-        else:
-            self.time = TimeType(TimeBase["TB_DONT_CARE"].value)
-
-        errors = []
-        for val, typ in zip(self.arg_vals, self.args):
-            try:
-                self.convert_arg_value(val, typ)
-                errors.append("")
-            except Exception as exc:
-                error_message = str(exc)
-                # Patch old versions of fprime-tools to replace a bad error message with the correct one
-                if isinstance(exc, TypeError) and "object of type 'NoneType' has no len()" in error_message:
-                    error_message = f"String size {len(val)} is greater than {typ.__max_string_len}!"
-                errors.append(error_message)
         # If any errors occur, then raise a aggregated error
         if [error for error in errors if error != ""]:
             raise CommandArgumentsException(errors)
@@ -87,6 +69,14 @@ class CmdData(sys_data.SysData):
         """
 
         return self.template
+
+    def get_time(self):
+        """ Return time """
+        return self.time
+
+    def get_descriptor(self):
+        """ Return the descriptor """
+        return self.descriptor
 
     def get_id(self):
         """Get the ID associate with the template of this data object
@@ -104,7 +94,7 @@ class CmdData(sys_data.SysData):
             list -- a list of value objects that were used in this data object.
         """
 
-        return self.arg_vals
+        return [arg.val for arg in self.args]
 
     def get_args(self):
         """Get the arguments associate with the template of this data object
@@ -157,6 +147,21 @@ class CmdData(sys_data.SysData):
         else:
             return f"{time_str}: {name} : {arg_str}"
 
+    def process_args(self, input_values):
+        """ Process input arguments """
+        errors = []
+        args = []
+        for val, arg_tuple in zip(input_values, self.template.arguments):
+            try:
+                _, _, arg_type = arg_tuple
+                arg_value = arg_type()
+                self.convert_arg_value(val, arg_value)
+                args.append(arg_value)
+                errors.append("")
+            except Exception as exc:
+                errors.append(str(exc))
+        return args, errors
+
     @staticmethod
     def convert_arg_value(arg_val, arg_type):
         if arg_val is None:
@@ -170,9 +175,7 @@ class CmdData(sys_data.SysData):
             elif value in ("false", "no"):
                 av = False
             else:
-                raise CommandArgumentException(
-                    "Argument value is not a valid boolean"
-                )
+                raise CommandArgumentException("Argument value is not a valid boolean")
             arg_type.val = av
         elif isinstance(arg_type, EnumType):
             arg_type.val = arg_val
@@ -182,7 +185,7 @@ class CmdData(sys_data.SysData):
             arg_type,
             (I64Type, U64Type, I32Type, U32Type, I16Type, U16Type, I8Type, U8Type),
         ):
-            arg_type.val = int(arg_val, 0)
+            arg_type.val = int(arg_val, 0) if isinstance(arg_val, str) else int(arg_val)
         elif isinstance(arg_type, StringType):
             arg_type.val = arg_val
         # Cannot handle serializable or array argument inputs
@@ -194,10 +197,7 @@ class CmdData(sys_data.SysData):
             )
 
     def __str__(self):
-        arg_str = "".join(
-            f"{name} : {str(typ.val)} |"
-            for name, typ in zip(self.arg_names, self.args)
-        )
+        arg_str = "".join(f"{name} : {str(typ.val)} |" for name, typ in zip([arg[0] for arg in self.template.get_args()], self.args))
         arg_str = f"w/ args | {arg_str}"
 
         arg_info = f"{self.template.mnemonic} "

@@ -210,10 +210,13 @@ class SeqFileParser:
                         else:
                             try:
                                 descriptor, seconds, useconds = parseTime(i, line[0])
-                            except:
+                            except Exception:
                                 raise gseExceptions.GseControllerParsingException(
                                     "Line %d: %s"
-                                    % (i + 1, "Encountered syntax error parsing timestamp")
+                                    % (
+                                        i + 1,
+                                        "Encountered syntax error parsing timestamp",
+                                    )
                                 )
                             mnemonic = line[1]
                             args = []
@@ -221,7 +224,7 @@ class SeqFileParser:
                                 args = line[2:]
                                 try:
                                     args = parseArgs(args)
-                                except:
+                                except Exception:
                                     raise gseExceptions.GseControllerParsingException(
                                         "Line %d: %s"
                                         % (
@@ -236,4 +239,3 @@ class SeqFileParser:
                     messages.append(exc.getMsg())
             if cont and messages:
                 raise gseExceptions.GseControllerParsingException("\n".join(messages))
-

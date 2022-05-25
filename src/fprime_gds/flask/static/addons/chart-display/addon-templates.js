@@ -26,7 +26,19 @@ export let chart_wrapper_template = `
                     </div>
                 </div>
             </div>
-            <div class="col-md-8"></div>
+            <div class="col-md-6"></div>
+            <div class="col-md-1">
+                <a :href="saveChartsHref" download="current-charts.txt" class="btn btn-secondary btn-block">
+                    <i class="fa fa-save"></i><span class="d-md-none d-lg-inline">Save</span>
+                </a>
+            </div>
+            <div class="col-md-1">
+                <label class="btn btn-secondary btn-file btn-block">
+                    <i class="fa fa-folder-open"></i>
+                    <span class="d-md-none d-lg-inline">Load</span>
+                    <input type="file" v-on:input="loadCharts" style="display: none;">
+                </label>
+            </div>
             <div class="col-md-1">
                 <button class="btn btn-secondary btn-block float-right" v-on:click="isHelpActive = !isHelpActive">
                     <i class="fas fa-question-circle"></i>
@@ -55,7 +67,8 @@ export let chart_wrapper_template = `
             </div>
         </transition>
         <component v-for="(chartInst, index) in wrappers" is="chart-display" :key="chartInst.id"
-            :id="chartInst.id" :siblings="siblings" v-on:delete-chart="deleteChart">
+            :id="chartInst.id" :siblings="siblings" v-on:delete-chart="deleteChart" v-bind:selected="chartInst.selected"
+            v-on:input="chartInst.selected = $event" >
         </component>
     </div>
 `;
@@ -74,15 +87,21 @@ export let chart_display_template = `
                 </button>
                 <span class="card-subtitle text-muted">{{ selected }} </span>
             </div>
-            
             <div class="card-body" v-bind:class="{'collapse': isCollapsed}">
                 
                 <div class="row">
                     <div class="col-md-4">
                         <v-select placeholder="Select a Channel" id="channelList" label="option" style="flex: 1 1 auto;" 
                                   :clearable="false" :searchable="true" :filterable="true" :options="channelNames"
-                                  v-model="selected">
+                                  v-bind:value="selected" v-on:input="updateSelected($event)">
                         </v-select>
+                    </div>
+                    <div class="col-md-4 input-group">
+                        <div class="input-group-prepend">
+                            <span class="input-group-text">Data Window:</span>
+                        </div>
+                        <input name="timespan" type="number" v-model="timespan" class="form-control" />
+                        <span class="input-group-text">(S)</span>
                     </div>
                 </div>
 

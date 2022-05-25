@@ -29,8 +29,7 @@ function flatten(target, opts) {
     opts = opts || {};
     // Default supported F Prime types
     const supportedTypes =
-        ["U8", "U16", "U32", "U64", "I8", "I16", "I32", "I64", "F32", "F64"] ||
-        opts.supportedTypes;
+        ["U8Type", "U16Type", "U32Type", "U64Type", "I8Type", "I16Type", "I32Type", "I64Type", "F32Type", "F64Type"];
 
     const prefix = opts.prefix || "";
     const delimiter = opts.delimiter || ".";
@@ -41,6 +40,18 @@ function flatten(target, opts) {
     function step(object, prev, currentDepth) {
         currentDepth = currentDepth || 1;
 
+        // Cannot handle strings and enumerations
+        if (object.name.endsWith("String") || ("ENUM_DICT" in object)) {
+            return;
+        }
+        else if ("LENGTH" in object) {
+            let new_object = [...Array(object["LENGTH"])].map(() => { return {"name": object["MEMBER_TYPE"].name} });
+            object = new_object;
+        }
+        else if ("MEMBER_LIST" in object) {
+                let new_object = Object.fromEntries(Object.values(object.MEMBER_LIST).map((member) => [member[0], member[1]]))
+                object = new_object;
+        }
         Object.keys(object).forEach(function (key) {
             const value = object[key];
             const isarray = opts.safe && Array.isArray(value);
@@ -79,7 +90,7 @@ function flatten(target, opts) {
 
     // Get unique parent of each path
     const output_set = new Set();
-    for (const [key, value] of Object.entries(output)) {
+    for (const [key, _] of Object.entries(output)) {
         output_set.add(key.split(delimiter).slice(0, -1).join(delimiter));
     }
 

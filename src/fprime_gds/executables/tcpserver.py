@@ -438,7 +438,7 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     socket id's for writing to destinations.
     """
 
-    dest_obj = dict()
+    dest_obj = {}
     lock_obj = threading.Lock()
 
 
@@ -506,7 +506,7 @@ def main(argv=None):
             action="store",
             type="int",
             help="Set threaded tcp socket server port [default: %default]",
-            default=50007,
+            default=50050,
         )
         parser.add_option(
             "-i",

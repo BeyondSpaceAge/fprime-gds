@@ -67,6 +67,10 @@ class SerialAdapter(fprime_gds.common.communication.adapters.base.BaseAdapter):
         self.baud = baud
         self.serial = None
 
+    def __repr__(self):
+        """ String representation for logging """
+        return f"UART@{self.device}:{self.baud}bps"
+
     def open(self):
         """
         Opens the serial port based on previously supplied settings. If the port is already open, then close it first.
@@ -169,7 +173,7 @@ class SerialAdapter(fprime_gds.common.communication.adapters.base.BaseAdapter):
         ports = map(lambda info: info.device, list_ports.comports(include_links=True))
         if not args["device"] in ports:
             raise ValueError(
-                f"Serial port '{args["device"]}' not valid. Available ports: {ports}"
+                f"Serial port '{args['device']}' not valid. Available ports: {ports}"
             )
         # Note: baud rate may not *always* work. These are a superset
         try:

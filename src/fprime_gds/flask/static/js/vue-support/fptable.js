@@ -1,5 +1,8 @@
-import {filter, toArrayIfString} from "./utils.js";
+import {filter, ScrollHandler, toArrayIfString} from "./utils.js";
 import {_uploader} from "../uploader.js";
+import {loadTextFileInputData, saveTextFileViaHref} from "../loader.js";
+import {_datastore} from "../datastore.js";
+
 /**
  * fp-row:
  *
@@ -85,7 +88,7 @@ Vue.component("fp-row", {
             if (typeof (this.itemToColumns) !== "function") {
                 throw Error("Failed to define required 'itemToColumns' function on fp-table")
             }
-            return this.itemToColumns(this.item).filter((item, index) => this.visible == null || this.visible.indexOf(index) != -1);
+            return this.itemToColumns(this.item).filter((item, index) => this.visible == null || this.visible.indexOf(index) !== -1);
         },
         /**
          * Calculates the style of the row based on a given item. This is optional and will not raise an error if the
@@ -135,7 +138,7 @@ Vue.component("file-row", {
             let uplinkvue = this.$parent.$parent;
             let index = uplinkvue.selected.indexOf(this.item);
             // Local javascript file, removeit from the selected (curation) list
-            if (action == "Remove" && index != -1) {
+            if (action === "Remove" && index !== -1) {
                 uplinkvue.selected.splice(index, 1);
             } else {
                 _uploader.command(this.item.source, action);
@@ -192,9 +195,24 @@ Vue.component("fp-table", {
          * items:
          *
          * 'items' should be bound to an Array of objects. Each object will be passed to an individual row. These items
-         * must be compatible with the 'itemToColumns' property.
+         * must be compatible with the 'itemToColumns' property. (Optional) See itemsKey for a more efficient approach
+         * to rendering long-lists.
          */
-        items: Array,
+        items: {
+            type: Array,
+            default: null
+        },
+        /**
+         * itemsKey:
+         *
+         * Key into the global datastore for acquiring items. This can be used as a replacement to specifying items so
+         * as to filter the items down before making these items reactive. This will hopefully side-step the expensive
+         * Vue mechanics called on large lists.
+         */
+        itemsKey: {
+            type: String,
+            default: null
+        },
         /**
          * itemToColumns:
          *
@@ -319,24 +337,107 @@ Vue.component("fp-table", {
     },
     // Required data items (unique for each table instance)
     data: function() {
+        let displayed = []; // Displayed items, to be kept minimal for reducing the reactive burden of large arrays
+        let scroller = new ScrollHandler(displayed,40, 5);
+        // Register self as a consumer if the itemsKey is being used
+        if (this.itemsKey !== null && this.items === null) {
+            _datastore.registerConsumer(this.itemsKey, this);
+            scroller.updateData(Object.values(_datastore[this.itemsKey]));
+        }
         return {
-            matching: (this.filterText) ? [this.filterText] : [],
+            displayed: displayed,
+            matching: this.filterText,
             editing: false,
             // use Vue.util.extend to copy by data, not by reference
             view: Vue.util.extend([], toArrayIfString(this.initialViews)),
-            fields: Vue.util.extend([], toArrayIfString(this.initialFields))
+            fields: Vue.util.extend([], toArrayIfString(this.initialFields)),
+            scroller: scroller,
+            scrollerData: scroller.metadata,
+            itemsLength: 0,
+            _timeoutId: null
         }
     },
     methods: {
+        /**
+         * Function triggered on input to the filters box. This will delay for a 300ms before triggering a single run
+         * of the filtering algorithm. This will allow users to finish typing but will not require them to hit ENTER
+         * to indicate this fact. It balances reactivity against redundant long-running invocations.
+         */
+        onFilterInput() {
+            clearTimeout(this._timeoutId);
+            this._timeoutId = setTimeout(this.send, 300);
+        },
+        /**
+         * Send function for handling new items. In this case, it just acts as a signal to recompute the displayed items
+         * to minimize the impact of the vue's reactivity. In case that itemsKey is not used, this is a no-op.
+         * @param unused: (unused) new items being added to the data pool
+         */
+        send(unused) {
+            if (this.itemsKey !== null && this.items === null) {
+                let data = Object.values(_datastore[this.itemsKey]);
+                this.itemsLength = data.length;
+                this.scroll(this.filter(data));
+            }
+        },
+
+        /**
+         * Filter a set of items based on the properties herein.
+         * @param input_items: items to filter down
+         */
+        filter(input_items) {
+            // Map local methods into the closure provided to the filtering function
+            let itemToColumns = this.itemToColumns;
+            // Pre-filter step removes non-viewable items
+            let items = [];
+            for (let i = 0; i < input_items.length; i++) {
+                let item = input_items[i];
+                // Visible if editing
+                if (this.editing) {
+                    items.push(item);
+                }
+                // Visible if in no views selected and not hidden
+                else if (this.view.length === 0 && !this.itemHide(item)) {
+                    items.push(item);
+                }
+                // Visible if not hidden and not supporting views
+                else if (!this.supportViews && !this.itemHide(item)) {
+                    items.push(item);
+                }
+                // Visible if in the view, always
+                else if (this.view.indexOf(this.itemToViewName(item)) !== -1) {
+                    items.push(item);
+                }
+            }
+            // Now filter items based on removable filters
+            let filtered = filter(items, this.matching.split(" "),
+                function(item) {
+                    return itemToColumns(item).join(" ");
+                });
+            if (this.reverse) {
+                filtered.reverse();
+            }
+            return filtered;
+        },
+
+        scroll(items) {
+            // No scrolling, bail
+            if (this.scroller == null) {
+                return items;
+            }
+            this.scroller.updateData(items);
+            let new_items = items.slice(this.scroller.offset, this.scroller.offset + this.scroller.count);
+            return new_items;
+        },
+
         /**
          * Process the checked-child message. This should add or remove names from the view.
          * @param message: message to process
          */
         checkedChild: function(message) {
             let vname = this.itemToViewName(message.child);
-            if (message.value && this.view.indexOf(vname) == -1) {
+            if (message.value && this.view.indexOf(vname) === -1) {
                 this.view.push(vname);
-            } else if (!message.value && this.view.indexOf(vname) != -1) {
+            } else if (!message.value && this.view.indexOf(vname) !== -1) {
                 this.view.splice(this.view.indexOf(vname), 1);
             }
             this.$refs.allbox.indeterminate = true;
@@ -366,7 +467,7 @@ Vue.component("fp-table", {
         checkAll: function(e) {
             let state = e.target.checked;
             let itemToColumns = this.itemToColumns;
-            let filtered = filter(this.items, this.matching,
+            let filtered = filter(this.items, this.matching.split(" "),
                 function(item) {
                     return itemToColumns(item).join(" ");
                 });
@@ -381,35 +482,36 @@ Vue.component("fp-table", {
          * @return {boolean}
          */
         inView(item) {
-            return !this.supportViews || this.view.indexOf(this.itemToViewName(item)) != -1;
+            return !this.supportViews || this.view.indexOf(this.itemToViewName(item)) !== -1;
         },
         /**
          * Function used to read a file an input it as a view.
          * @param event: event to represent a file load
          */
         readFile(event) {
-            // Check file size and read
-            let file = event.target.files[0];
             let _self = this;
-            if (file.size < 50 * 1024) {
-                let filer = new FileReader();
-                filer.readAsText(file);
-                filer.onload = function (something) {
-                    if (FileReader.DONE == filer.DONE) {
-                        let splits = filer.result.split(/\s/);
-                        for (let i = 0; i < splits.length; i++) {
-                            splits[i] = splits[i].trim();
-                        }
-                        _self.view = splits;
-                    }
-                };
-            } else {
-                console.error("[ERROR] File too big. Try again champ");
-            }
+            loadTextFileInputData(event).then((data) => {
+               let splits = data.split(/\s/);
+                for (let i = 0; i < splits.length; i++) {
+                    splits[i] = splits[i].trim();
+                }
+                _self.view = splits;
+            }).catch(console.error);
         }
     },
     // Computed items
     computed: {
+
+        postFiltered() {
+            if (this.itemsKey != null) {
+                return this.displayed;
+            } else if (this.items != null) {
+                return this.scroll(this.items);
+            } else {
+                console.error("items and itemsKey is not defined")
+            }
+        },
+
         /**
          * visibleIndices:
          *
@@ -419,10 +521,10 @@ Vue.component("fp-table", {
          * @return {null|Uint8Array}
          */
         visibleIndices: function() {
-            if (this.fields == null || this.fields.length == 0) {
+            if (this.fields == null || this.fields.length === 0) {
                 return null;
             }
-            return this.fields.map(field => this.headerColumns.indexOf(field)).filter(index => index != -1);
+            return this.fields.map(field => this.headerColumns.indexOf(field)).filter(index => index !== -1);
         },
         /**
          * calculatedHeaderColumns:
@@ -434,54 +536,17 @@ Vue.component("fp-table", {
          */
         calculatedHeaderColumns: function() {
             // Check for null full-display
-            if (this.fields == null || this.fields.length == 0) {
+            if (this.fields == null || this.fields.length === 0) {
                 return this.headerColumns;
             }
-            return this.fields.filter(field => this.headerColumns.indexOf(field) != -1);
-        },
-        /**
-         * Calculates a list of displayed items.
-         */
-        filteredItems: function() {
-            // Map local methods into the closure provided to the filtering function
-            let itemToColumns = this.itemToColumns;
-            // Pre-filter step removes non-viewable items
-            let items = [];
-            for (let i = 0; i < this.items.length; i++) {
-                let item = this.items[i];
-                // Visible if editing
-                if (this.editing) {
-                    items.push(item);
-                }
-                // Visible if in no views selected and not hidden
-                else if (this.view.length == 0 && !this.itemHide(item)) {
-                    items.push(item);
-                }
-                // Visible if not hidden and not supporting views
-                else if (!this.supportViews && !this.itemHide(item)) {
-                    items.push(item);
-                }
-                // Visible if in the view, always
-                else if (this.view.indexOf(this.itemToViewName(item)) != -1) {
-                    items.push(item);
-                }
-            }
-            // Now filter items based on removable filters
-            let filtered = filter(items, this.matching,
-                function(item) {
-                    return itemToColumns(item).join(" ");
-                });
-            if (this.reverse) {
-                filtered.reverse();
-            }
-            return filtered;
+            return this.fields.filter(field => this.headerColumns.indexOf(field) !== -1);
         },
         /**
          * Generates an href that can be used to download a file.  Keep the download up-to-date with the view.
          * @return {string} href string bound to href attribute
          */
         viewHref: function() {
-            return 'data:text/plain;charset=utf-8,' + encodeURIComponent(this.view.join("\n"));
+            return saveTextFileViaHref(this.view.join("\n"));
         }
     },
     // Makes the table sortable after creation using post creation updates
@@ -501,5 +566,30 @@ Vue.component("fp-table", {
                 console.warn("sortable.js not found, not attempting to sort tables");
             }
         })
+    },
+    /**
+     * Add scroll event listener during mounting of element
+     */
+    mounted: function() {
+        // No scrolling control
+        if (this.scroller === null || !this.$el.querySelector) {
+            return;
+        }
+        // Set and handle the element post-render as this will fail if not rendered
+        this.$nextTick(function(e) {
+            let element = this.$el.querySelector("#fp-scrollable-id");
+            if (element != null) {
+                this.scroller.setElement(element);
+            }
+        });
+    },
+    /**
+     * Remove scroll event listener
+     */
+    beforeDestroy: function() {
+        // Check scrolling control and setup
+        if (this.scroller != null) {
+            this.scroller.unsetElement();
+        }
     }
 });

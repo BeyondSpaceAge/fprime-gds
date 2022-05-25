@@ -8,7 +8,7 @@
  */
 import {listExistsAndItemNameNotInList, timeToString} from "./utils.js"
 import "./fptable.js";
-import {_datastore} from "../datastore.js";
+import {_datastore, _dictionaries} from "../datastore.js";
 /**
  * channel-table:
  *
@@ -63,10 +63,11 @@ Vue.component("channel-table", {
          * @return {*[]}
          */
         columnify(item) {
+            let template = _dictionaries.channels[item.id];
             if (item.time == null || item.val == null) {
-                return ["", "0x" + item.id.toString(16), item.template.full_name, ""];
+                return ["", "0x" + item.id.toString(16), template.full_name, ""];
             }
-            return [timeToString(item.time), "0x" + item.id.toString(16), item.template.full_name,
+            return [timeToString(item.datetime || item.time), "0x" + item.id.toString(16), template.full_name,
                 (typeof(item.display_text) !== "undefined")? item.display_text : item.val]
         },
         /**
@@ -83,13 +84,13 @@ Vue.component("channel-table", {
          * @return {string}: style-class to use
          */
         calculateRowStyle() {
+            let template = _dictionaries.channels[item.id];
             let value = this.channel.value;
-            let channel = this.channel;
             let bounds = [
-                {"class": "fp-color-fatal", "bounds": [channel.template.low_red, value <= channel.template.high_red]},
+                {"class": "fp-color-fatal", "bounds": [template.low_red, value <= template.high_red]},
                 {
                     "class": "fp-color-warn-hi",
-                    "bounds": [channel.template.low_yellow, value <= channel.template.high_yellow]
+                    "bounds": [template.low_yellow, value <= template.high_yellow]
                 }
             ];
             // Check bounds.
@@ -110,7 +111,8 @@ Vue.component("channel-table", {
          * @return item name
          */
         itemToName(item) {
-            return item.template.full_name;
+            let template = _dictionaries.channels[item.id];
+            return template.full_name;
         },
         /**
          * Function that hides items with null time or value.
@@ -121,12 +123,6 @@ Vue.component("channel-table", {
             return item.val == null
                 || item.time == null
                 || listExistsAndItemNameNotInList(this.itemsShown, item);
-        }
-    },
-    // Computed methods
-    computed: {
-        conform() {
-            return Object.values(this.channels);
         }
     }
 });

@@ -17,6 +17,7 @@ import "./log.js"
 import "./uplink.js"
 import "./dashboard.js"
 import {_datastore} from "../datastore.js";
+import {_validator} from "../validate.js";
 
 /**
  * tabbed-ect:
@@ -33,7 +34,7 @@ Vue.component("tabbed-etc", {
         function () {
             let hash = window.location.hash.replace("#", "");
             return {
-                "currentTab": (hash == "")? "Commanding" : hash,
+                "currentTab": (hash === "")? "Commanding" : hash,
                 "tabs": [
                     ["Commanding", "Cmd"], 
                     ["Events", "Evn"], 
@@ -43,10 +44,12 @@ Vue.component("tabbed-etc", {
                     ["Logs", "Log"],
                     ["Charts", "Chr"], 
                     ["Sequences", "Seq"], 
-                    ["Dashboard", "Dsh"]
+                    ["Dashboard", "Dsh"],
+                    ["Advanced", "Adv"]
                 ],
                 "config": config,
-                "active": _datastore.active
+                "counts": _validator.counts,
+                "flags": _datastore.flags
             }
         },
     methods: {
@@ -79,6 +82,13 @@ Vue.component("tabbed-etc", {
                     elem.classList.add("d-none");
                 } 
             }
+        },
+        /**
+         * Check if the supplied tab is enabled w.r.t the configuration of the GUI.
+         * @param tab: tab fullname to check against
+         */
+        tabEnabled(tab) {
+            return true;
         }
     },
     computed: {
@@ -88,10 +98,17 @@ Vue.component("tabbed-etc", {
          */
         orb() {
             let orb = false;
-            for (let i = 0; i < this.active.length; i++) {
-                orb = orb || this.active[i];
+            for (let key in this.flags) {
+                orb = orb || (key.startsWith("active_") && this.flags[key]);
             }
             return orb;
+        },
+        /**
+         * Returns the number of errors detected this run
+         * @returns {number} count of errors
+         */
+        error_count() {
+            return this.errors.length;
         }
 
     }

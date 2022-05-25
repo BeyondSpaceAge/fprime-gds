@@ -11,10 +11,12 @@ import {
     chart_wrapper_template,
     chart_display_template,
 } from "./addon-templates.js";
-import { _datastore } from "../../js/datastore.js";
+import { _datastore, _dictionaries } from "../../js/datastore.js";
 import { _loader } from "../../js/loader.js";
 import { SiblingSet } from "./sibling.js";
 import { timeToDate } from "../../js/vue-support/utils.js";
+import {loadTextFileInputData, saveTextFileViaHref} from "../../js/loader.js";
+import {_performance} from "../../js/performance.js";
 
 import "./vendor/chart.js";
 import "./vendor/chartjs-adapter-luxon.min.js";
@@ -35,7 +37,7 @@ Vue.component("chart-wrapper", {
             counter: 1,
             locked: false,
             isHelpActive: false,
-            wrappers: [{ id: 0 }], // Starts with a single chart
+            wrappers: [{ id: 0, "selected": null }], // Starts with a single chart
             siblings: new SiblingSet(),
         };
     },
@@ -44,8 +46,9 @@ Vue.component("chart-wrapper", {
         /**
          * Add new chart handling the Chart+ button.
          */
-        addChart(type) {
-            this.wrappers.push({ id: this.counter });
+        addChart(event, selected) {
+            selected = selected || null;
+            this.wrappers.push({ id: this.counter, selected: selected });
             this.counter += 1;
         },
         /**
@@ -55,7 +58,34 @@ Vue.component("chart-wrapper", {
             const index = this.wrappers.findIndex((f) => f.id === id);
             this.wrappers.splice(index, 1);
         },
+
+        selected(data) {
+            const index = this.wrappers.findIndex((f) => f.id === data.id);
+            this.wrappers[index].selected = data.selected;
+        },
+
+        loadCharts(event) {
+            loadTextFileInputData(event).then((data) => {
+                let splits = data.split(/\s/);
+                // Remove trailing blank chart if it exists and we are loading something to replace it
+                if (splits.length > 0 && this.wrappers.length > 0 && this.wrappers[this.wrappers.length - 1].selected == null) {
+                    this.wrappers.splice(this.wrappers.length - 1, 1);
+                }
+
+                for (let i = 0; i < splits.length; i++) {
+                    let new_chart_selected = splits[i].trim();
+                    this.addChart(null, new_chart_selected);
+                }
+            }).catch(console.error);
+        }
     },
+    computed: {
+         saveChartsHref() {
+            let data = this.wrappers.map((item) => { return item.selected} );
+            data = data.filter((item) => {return item || false});
+            return saveTextFileViaHref(data.join("\n"));
+        }
+    }
 });
 
 /**
@@ -63,7 +93,7 @@ Vue.component("chart-wrapper", {
  */
 Vue.component("chart-display", {
     template: chart_display_template,
-    props: ["id", "siblings"],
+    props: ["id", "siblings", "selected"],
     data: function () {
         const names_list = Object.values(
             _loader.endpoints["channel-dict"].data
@@ -78,14 +108,19 @@ Vue.component("chart-display", {
 
         return {
             channelNames: names,
-            selected: null,
             oldSelected: null,
 
             isCollapsed: false,
             pause: false,
 
             chart: null,
+            timespan: 3600
         };
+    },
+    mounted() {
+        if (this.selected != null) {
+            this.registerChart();
+        }
     },
     methods: {
         /**
@@ -103,7 +138,7 @@ Vue.component("chart-display", {
         registerChart() {
             // If there is a chart object destroy it to reset the chart
             this.destroy();
-            _datastore.registerChannelConsumer(this);
+            _datastore.registerConsumer("channels", this);
             let config = generate_chart_config(this.selected);
             config.options.plugins.zoom.zoom.onZoom = this.siblings.syncToAll;
             config.options.plugins.zoom.pan.onPan = this.siblings.syncToAll;
@@ -115,6 +150,7 @@ Vue.component("chart-display", {
                     this.$el.querySelector("#ds-line-chart"),
                     config
                 );
+                _performance.addCachingObject("Chart " + this.id, this.chart.data.datasets[0].data);
             } catch (err) {
                 // Todo. This currently suppresses the following bug error
                 // See ChartJs bug report https://github.com/chartjs/Chart.js/issues/9368
@@ -136,7 +172,8 @@ Vue.component("chart-display", {
             if (this.chart == null) {
                 return;
             }
-            _datastore.deregisterChannelConsumer(this);
+            _performance.removeCachingObject("Chart " + this.id);
+            _datastore.deregisterConsumer("channels", this);
             this.chart.data.datasets.forEach((dataset) => {
                 dataset.data = [];
             });
@@ -157,7 +194,7 @@ Vue.component("chart-display", {
          * Callback to handle new channels being pushed at this object.
          * @param channels: new set of channels (unfiltered)
          */
-        sendChannels(channels) {
+        send(channels) {
             if (this.selected == null || this.chart == null) {
                 return;
             }
@@ -170,14 +207,14 @@ Vue.component("chart-display", {
 
             // Filter channels down to the graphed channel
             let new_channels = channels.filter((channel) => {
-                return channel.template.full_name === channel_full_name;
+                return _dictionaries["channels"][channel.id].full_name === channel_full_name;
             });
 
             // Get channel value
             function getValue(ch_obj, path_str) {
                 // If serializable path exist parse and return its value
                 if (path_str) {
-                    let keys = "val_obj." + serial_path + ".value";
+                    let keys = "val." + serial_path;
                     return keys
                         .split(".")
                         .reduce((o, k) => (o || {})[k], ch_obj);
@@ -190,25 +227,31 @@ Vue.component("chart-display", {
             // Convert to chart JS format
             new_channels = new_channels.map((channel) => {
                 return {
-                    x: timeToDate(channel.time),
+                    x: channel.datetime || timeToDate(channel.time),
                     y: getValue(channel, serial_path),
                 };
             });
 
             // Graph and update
-            this.chart.data.datasets[0].data.push(...new_channels);
+            let data_array = this.chart.data.datasets[0].data;
+            data_array.push(...new_channels);
+
+            this.chart.options.scales.x.realtime.ttl = this.timespan * 1000;
             this.chart.update("quiet");
+
+            // Calculate the window span by max samples
+            let first = data_array[0] || {x: NaN};
+            let last = data_array[data_array.length - 1] || {x: NaN};
+
+            let millis = (last.x - first.x) * this.samples / (data_array.length - 1);
+            this.samples_duration = Math.floor(millis / 1000);
         },
-    },
-    /**
-     * Watch for new selection of channel and re-register the chart
-     */
-    watch: {
-        selected: function () {
-            if (this.selected !== this.oldSelected) {
-                this.oldSelected = this.selected;
-                this.registerChart();
+        updateSelected(new_selected) {
+            if (new_selected !== this.oldSelected) {
+                this.$emit('input', new_selected);
+                this.oldSelected = new_selected;
+                this.$nextTick().then(() => {this.registerChart()});
             }
-        },
-    },
+        }
+    }
 });

@@ -6,7 +6,7 @@
 // Setup component for select
 import "../../third-party/js/vue-select.js"
 import {listExistsAndItemNameNotInList, timeToString} from "./utils.js";
-import {_datastore} from "../datastore.js";
+import {_datastore, _dictionaries} from "../datastore.js";
 import {_loader} from "../loader.js";
 import {find_case_insensitive, validate_input} from "../validate.js"
 
@@ -73,14 +73,14 @@ Vue.component("command-argument", {
          */
         inputType() {
             // Unsigned integer
-            if (this.argument.type[0] == 'U') {
+            if (this.argument.type.name[0] == 'U') {
                 // Supports binary, hex, octal, and digital
                 return ["text", "0[bB][01]+|0[oO][0-7]+|0[xX][0-9a-fA-F]+|[1-9]\\d*|0", ""];
             }
-            else if (this.argument.type[0] == 'I') {
+            else if (this.argument.type.name[0] == 'I') {
                 return ["number", null, "1"];
             }
-            else if (this.argument.type[0] == 'F') {
+            else if (this.argument.type.name[0] == 'F') {
                 return ["number", null, "any"];
             }
             return ["text", ".*", null];
@@ -238,17 +238,16 @@ Vue.component("command-input", {
                 .catch(function(err) {
                     // Log all errors incoming
                     console.error("[ERROR] Failed to send command: " + err);
-                    let response = JSON.parse(err).message;
-                    // Argument errors are parceled out to each error
-                    if (typeof(response.errors) != "undefined") {
-                        for (let i = 0; i < response.errors.length; i++) {
-                            command.args[i].error = response.errors[i];
+                    let errors = JSON.parse(err).errors || [{"message": "Unknown error"}];
+                    for (let i = 0; i < errors.length; i++) {
+                        let error_message = errors[i].message || errors[i];
+                        error_message = error_message.replace("400 Bad Request:", "");
+                        let argument_errors = errors[i].args || [];
+                        for (let j = 0; j < argument_errors.length; j++) {
+                            command.args[j].error =argument_errors[j];
                         }
-                    }
-                    // All other command errors
-                    else {
-                        command.error = response;
-                        _self.error = response;
+                        command.error = error_message;
+                        _self.error = error_message;
                     }
                     _self.active = false;
                 });
@@ -309,7 +308,7 @@ Vue.component("command-item", {
          * @return {string} seconds.microseconds
          */
         calculateCommandTime: function() {
-            return timeToString(this.command.time);
+            return timeToString(this.command.datetime || this.command.time);
         }
     }
 });
@@ -371,10 +370,11 @@ Vue.component("command-history", {
          */
         columnify(item) {
             let values = [];
-            for (let i = 0; i < item.arg_vals.length; i++) {
-                values.push(item.arg_vals[i]);
+            for (let i = 0; i < item.args.length; i++) {
+                values.push(item.args[i]);
             }
-            return [timeToString(item.time), "0x" + item.id.toString(16), item.template.full_name, values.join(" ")];
+            let template = _dictionaries.commands_by_id[item.id];
+            return [timeToString(item.datetime || item.time), "0x" + item.id.toString(16), template.full_name, values.join(" ")];
         },
         /**
          * Take the given item and converting it to a unique key by merging the id and time together with a prefix
@@ -402,10 +402,11 @@ Vue.component("command-history", {
         */
         clickAction(item) {
             let cmd = item;
-            cmd.full_name = item.template.full_name;
+            let template = _dictionaries.commands_by_id[item.id];
+            cmd.full_name = template.full_name;
             // Can only set command if it is a child of a command input
             if (this.$parent.selectCmd) {
-                this.$parent.selectCmd(cmd.full_name, cmd.arg_vals, arg => arg);
+                this.$parent.selectCmd(cmd.full_name, cmd.args, arg => arg);
             }
         }
     }

@@ -51,8 +51,8 @@ class EventXmlLoader(XmlLoader):
                 f"Xml dict did not have a {self.EVENT_SECT} section"
             )
 
-        id_dict = dict()
-        name_dict = dict()
+        id_dict = {}
+        name_dict = {}
 
         for event in event_section:
             event_dict = event.attrib
@@ -68,7 +68,7 @@ class EventXmlLoader(XmlLoader):
                 event_desc = event_dict[self.DESC_TAG]
 
             # Parse arguments
-            args = self.get_args_list(event, xml_tree)
+            args = self.get_args_list(event, xml_tree, f"{ event_comp }::{ event_name }")
 
             event_temp = EventTemplate(
                 event_id,
@@ -81,6 +81,6 @@ class EventXmlLoader(XmlLoader):
             )
 
             id_dict[event_id] = event_temp
-            name_dict[event_name] = event_temp
+            name_dict[event_temp.get_full_name()] = event_temp
 
         return id_dict, name_dict

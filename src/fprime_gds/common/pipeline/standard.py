@@ -10,15 +10,17 @@ below.
 """
 import datetime
 import os.path
-
+from pathlib import Path
+from typing import Type
 import fprime.common.models.serialize.time_type
-import fprime_gds.common.client_socket.client_socket
 import fprime_gds.common.data_types.cmd_data
 import fprime_gds.common.distributor.distributor
 import fprime_gds.common.logger.data_logger
 
 # Local imports for the sake of composition
 from . import dictionaries, encoding, files, histories
+
+from fprime_gds.common.transport import RoutingTag, ThreadedTCPSocketClient
 
 
 class StandardPipeline:
@@ -45,6 +47,7 @@ class StandardPipeline:
         self.__coders = encoding.EncodingDecoding()
         self.__histories = histories.Histories()
         self.__filing = files.Filing()
+        self.__transport_type = ThreadedTCPSocketClient
 
     def setup(
         self, config, dictionary, down_store, logging_prefix=None, packet_spec=None
@@ -59,11 +62,10 @@ class StandardPipeline:
         :param logging_prefix: logging prefix. Defaults to not logging at all.
         :param packet_spec: location of packetized telemetry XML specification.
         """
+        assert dictionary is not None and Path(dictionary).is_file(), f"Dictionary {dictionary} does not exist"
         # Loads the distributor and client socket
         self.distributor = fprime_gds.common.distributor.distributor.Distributor(config)
-        self.client_socket = (
-            fprime_gds.common.client_socket.client_socket.ThreadedTCPSocketClient()
-        )
+        self.client_socket = self.__transport_type()
         # Setup dictionaries encoders and decoders
         self.dictionaries.load_dictionaries(dictionary, packet_spec)
         self.coders.setup_coders(
@@ -78,10 +80,23 @@ class StandardPipeline:
             logging_prefix,
         )
         # Register distributor to client socket
-        self.client_socket.register_distributor(self.distributor)
+        self.client_socket.register(self.distributor)
         # Final setup step is to make a logging directory, and register in the logger
         if logging_prefix:
             self.setup_logging(logging_prefix)
+
+    @property
+    def transport_implementation(self):
+        """Get implementation type for transport"""
+        return self.__transport_type
+
+    @transport_implementation.setter
+    def transport_implementation(self, transport_type: Type[None]):
+        """Set the implementation type for transport"""
+        assert (
+            self.client_socket is None
+        ), "Cannot setup transport implementation type after setup"
+        self.__transport_type = transport_type
 
     @classmethod
     def get_dated_logging_dir(cls, prefix=os.path.expanduser("~")):
@@ -114,30 +129,44 @@ class StandardPipeline:
         self.coders.register_event_consumer(self.logger)
         self.coders.register_command_consumer(self.logger)
         self.coders.register_packet_consumer(self.logger)
-        self.client_socket.register_distributor(self.logger)
+        self.client_socket.register(self.logger)
 
-    def connect(self, address, port):
-        """
-        Connects to the middleware layer
+    def connect(
+        self, connection_uri, incoming_tag=RoutingTag.GUI, outgoing_tag=RoutingTag.FSW
+    ):
+        """Connects to the middleware layer
 
-        :param address: address of middleware
-        :param port: port of middleware
+        Connect to the middleware layer. This connection needs to identify if the object is a a FSW or GUI client. The
+        default connection acts as a GUI client sending to FSW.
+
+        Note: this function provides backwards compatibility with historical versions of this connect method of the form
+        pipeline.connect(host, port). This version explicitly supplies a hostname without port, and integer port. No
+        other arguments are excepted. Use is discouraged.
+
+        Args:
+            connection_uri: URI of the connection to make
+            incoming_tag: this pipeline will act as supplied tag (GUI, FSW). Default: GUI
+            outgoing_tag: this pipeline will produce data for supplied tag (FSW, GUI). Default: FSW
         """
-        self.client_socket.connect(address, port)
-        self.client_socket.register_to_server(
-            fprime_gds.common.client_socket.client_socket.GUI_TAG
-        )
+        # Backwards compatibility with the old method .connect(host, port)
+        if isinstance(incoming_tag, int) and ":" not in connection_uri and outgoing_tag == RoutingTag.FSW:
+            connection_uri = f"{connection_uri}:{incoming_tag}"
+            incoming_tag = RoutingTag.GUI
+        self.client_socket.connect(connection_uri, incoming_tag, outgoing_tag)
 
     def disconnect(self):
         """
         Disconnect from socket
         """
-        self.client_socket.disconnect()
-        self.files.uplinker.exit()
+        try:
+            if self.client_socket is not None:
+                self.client_socket.disconnect()
+        finally:
+            if self.files is not None and self.files.uplinker is not None:
+                self.files.uplinker.exit()
 
     def send_command(self, command, args):
-        """
-        Sends commands to the encoder and history.
+        """Sends commands to the encoder and history.
 
         :param command: command id from dictionary to get command template
         :param args: arguments to process

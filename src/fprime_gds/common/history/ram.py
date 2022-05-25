@@ -9,6 +9,7 @@ Note: this RAM history treats "start times" as session tokens to remember where 
 
 :author: lestarch
 """
+import time
 import threading
 
 from fprime_gds.common.history.history import History
@@ -24,7 +25,7 @@ class RamHistory(History):
         """
         Constructor used to set-up in-memory store for history
         """
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.objects = []
         self.retrieved_cursors = {}
 
@@ -37,22 +38,24 @@ class RamHistory(History):
         with self.lock:
             self.objects.append(data)
 
-    def retrieve(self, start=None):
+    def retrieve(self, start=None, limit=None):
         """
         Retrieve objects from this history. 'start' is the session token for retrieving new elements. If session is not
         specified, all elements are retrieved. If session is specified, then unseen elements are returned. If the
         session itself is new, it is recorded and set to the newest data.
 
         :param start: return all objects newer than given start session key
+        :param limit: limit (count) of returned results
         :return: a list of objects
         """
         index = 0
-        size = self.size()
-        if start is not None:
-            index = self.retrieved_cursors.get(start, size)
         with self.lock:
-            objs = self.objects[index:size]
-            self.retrieved_cursors[start] = size
+            size = self.size()
+            if start is not None:
+                index = self.retrieved_cursors.get(start, size)
+            end_slice = min(size, index + (limit if limit is not None else size))
+            objs = self.objects[index:end_slice]
+            self.retrieved_cursors[start] = end_slice
         return objs
 
     def retrieve_new(self):
@@ -64,9 +67,9 @@ class RamHistory(History):
             a list of objects in chronological order
         """
         index = 0
-        if len(self.retrieved_cursors.values()) > 0:
-            index = max(self.retrieved_cursors.values())
         with self.lock:
+            if len(self.retrieved_cursors.values()) > 0:
+                index = max(self.retrieved_cursors.values())
             return self.objects[index:]
 
     def clear(self, start=None):
@@ -90,10 +93,74 @@ class RamHistory(History):
             for key in self.retrieved_cursors.keys():
                 self.retrieved_cursors[key] -= earliest
 
+    def sessions(self):
+        """
+        Accessor for the number of stored sessions
+
+        Returns:
+            number of tracked sessions
+        """
+        return len(self.retrieved_cursors.values())
+
     def size(self):
         """
         Accessor for the number of objects in the history
         Returns:
             the number of objects (int)
         """
-        return len(self.objects)
+        with self.lock:
+            return len(self.objects)
+
+
+class SelfCleaningRamHistory(RamHistory):
+    """A Ram history which clears itself after a time of inactivity"""
+
+    def __init__(self):
+        """Construct object"""
+        super().__init__()
+        self.last_request = {}
+        self.clear_time = -1
+
+    def set_clear_time(self, time):
+        """Update the clear time"""
+        self.clear_time = time
+
+    def retrieve(self, start=None, limit=None):
+        """
+        Retrieve objects from this history. 'start' is the session token for retrieving new elements. If session is not
+        specified, all elements are retrieved. If session is specified, then unseen elements are returned. If the
+        session itself is new, it is recorded and set to the newest data. This refreshes the last polled time preventing
+        self clearing for another time
+
+        :param start: return all objects newer than given start session key
+        :param limit: limit (count) of returned results
+        :return: a list of objects
+        """
+        if start is not None:
+            with self.lock:
+                self.last_request[start] = time.time()
+        return super().retrieve(start, limit)
+
+    def clear(self, start=None):
+        """
+        Clears objects from RamHistory. It clears upto the earliest session. If session is supplied, the session id will
+        be deleted as well. This will also check all sessions for expiration and clear any sessions that have not been
+        updated in self.clear_time seconds, unless that value is negative.
+
+        Args:
+            start: a position in the history's order (int).
+        """
+        current = time.time()
+        with self.lock:
+            deletes = [
+                key
+                for key, last in self.last_request.items()
+                if self.clear_time > 0 and (last + self.clear_time) < current
+            ]
+            for delete in deletes:
+                for container in [self.retrieved_cursors, self.last_request]:
+                    try:
+                        del container[delete]
+                    except KeyError:
+                        pass
+        return super().clear(start)

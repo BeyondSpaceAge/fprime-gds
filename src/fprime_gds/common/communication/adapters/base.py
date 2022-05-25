@@ -21,10 +21,10 @@ class BaseAdapter(abc.ABC):
     """
 
     def open(self):
-        """Null default implementation """
+        """Null default implementation"""
 
     def close(self):
-        """Null default implementation """
+        """Null default implementation"""
 
     @abc.abstractmethod
     def read(self, timeout=0.500):
@@ -111,5 +111,7 @@ class BaseAdapter(abc.ABC):
         :param args: namespace of arg value to help build an adapter
         :return: newly constructed adapter
         """
+        if adapter_name == "none":
+            return None
         adapter = cls.get_adapters()[adapter_name]
         return adapter(**cls.process_arguments(adapter, args))

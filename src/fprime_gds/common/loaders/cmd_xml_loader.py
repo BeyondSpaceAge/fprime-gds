@@ -49,8 +49,8 @@ class CmdXmlLoader(XmlLoader):
                 f"Xml dict did not have a {self.EVENT_SECT} section"
             )
 
-        id_dict = dict()
-        name_dict = dict()
+        id_dict = {}
+        name_dict = {}
 
         for cmd in cmd_section:
             cmd_dict = cmd.attrib
@@ -64,11 +64,11 @@ class CmdXmlLoader(XmlLoader):
                 cmd_desc = cmd_dict[self.DESC_TAG]
 
             # Parse Arguments
-            args = self.get_args_list(cmd, xml_tree)
+            args = self.get_args_list(cmd, xml_tree, f"{ cmd_comp }::{ cmd_mnemonic }")
 
             cmd_temp = CmdTemplate(cmd_opcode, cmd_mnemonic, cmd_comp, args, cmd_desc)
 
             id_dict[cmd_opcode] = cmd_temp
-            name_dict[f"{cmd_comp}.{cmd_mnemonic}"] = cmd_temp
+            name_dict[cmd_temp.get_full_name()] = cmd_temp
 
         return id_dict, name_dict

@@ -90,11 +90,17 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                             <span class="navbar-brand">
                                     <img v-bind:src="orb ? config.dataSuccessIcon : config.dataErrorIcon"
                                          width="30" height="30">
-                                </span>
+                            </span>
+                            <div class="btn-group-sm btn-group-vertical">
+                                <button v-for="(display_class, counter) in config.summaryFields"
+                                        :class="['btn', 'btn-sm', 'btn-' + display_class]">
+                                    {{ counter.replace("_", " ") }}: {{ (counts[counter] >= 99) ? "99+" : counts[counter] }}
+                                </button>
+                            </div>
                         </nav>
                     </div>
-                    <div class="container-fluid fp-flex-repeater">
-                        <!-- NOTE: *must* use v-show, as v-if will perish the component losing state -->
+                    <div v-if="flags.loaded" class="container-fluid fp-flex-repeater">
+                        <!-- NOTE: on v-show is used in place of v-if to ensure that state is maintained -->
                         <command-input v-show="currentTab == 'Commanding'"></command-input>
                         <channel-table v-show="currentTab == 'Channels'"></channel-table>
                         <event-list    v-show="currentTab == 'Events'"></event-list>
@@ -104,6 +110,26 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                         <chart-wrapper v-show="currentTab == 'Charts'"></chart-wrapper>
                         <sequencer     v-show="currentTab == 'Sequences'"></sequencer>
                         <dashboard     v-show="currentTab == 'Dashboard'"></dashboard>
+                        <advanced-settings v-show="currentTab == 'Advanced'"></advanced-settings>
+                    </div>
+                    <div v-if="!flags.loaded" class="container">
+                        <div class="align-middle">
+                            <div class="row">
+                                <div class="col col-3">
+                                    <img v-bind:src="config.logo" width="100%" height="100%"
+                                         v-bind:alt="config.projectName" v-bind:title="config.projectName">
+                                </div>
+                                <div class="col col-8 card">
+                                    <div class="card-header">
+                                        <h3>{{ config.projectName }} is loading...</h3>
+                                    </div>
+                                    <div class="card-body">
+                                        <p>{{ config.projectName }} is loading project software dictionaries,
+                                            configuration, and other necessary data. This may take a moment.</p>
+                                    </div>
+                                </div>
+                        </div>
+                    </div>
                     </div>
                 </div>
             </template>
@@ -149,7 +175,7 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
             <template id="command-history-template">
                 <div class="fp-flex-repeater">
                     <fp-table :header-columns="['Command Time', 'Command Id', 'Command Mnemonic', 'Command Args']"
-                              :items="cmdhist"
+                              :items-key="'command_history'"
                               :item-to-columns="columnify"
                               :item-to-unique="keyify"
                               :item-hide="isItemHidden"
@@ -259,12 +285,12 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
             <template id="command-argument-template">
                 <div>
                     <label :for="argument.name" class="control-label font-weight-bold">{{ argument.name }}</label><span v-if="argument.description != null">: {{ argument.description }}</span>
-                    <input v-if="argument.type != 'Enum'" :type="inputType[0]" :id="argument.name" class="form-control fprime-input"
+                    <input v-if="!argument.type.ENUM_DICT" :type="inputType[0]" :id="argument.name" class="form-control fprime-input"
                            :placeholder="argument.name" :pattern="inputType[1]" :step="inputType[2]" v-on:input="validate"
                            v-model="argument.value"  :class="argument.error == '' ? '' : 'is-invalid'" required>
-                    <v-select v-if="argument.type == 'Enum'" :id="argument.name" style="flex: 1 1 auto; background-color: white;"
+                    <v-select v-if="argument.type.ENUM_DICT" :id="argument.name" style="flex: 1 1 auto; background-color: white;"
                               :clearable="false" :searchable="true" @input="validate"
-                              :filterable="true"  label="full_name" :options="argument.possible"
+                              :filterable="true"  label="full_name" :options="Object.keys(argument.type.ENUM_DICT)"
                               v-model="argument.value" class="fprime-input" :class="argument.error == '' ? '' : 'is-invalid'" required>
                     </v-select>
                     <div class="invalid-feedback">{{ argument.error }}</div>
@@ -282,30 +308,8 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                     <div class="fp-flex-header">
                         <h2>Events</h2>
                     </div>
-                    <div class="row justify-content-end no-gutters">
-                        <div class="col-lg-4">
-                            <div class="input-group mb-3">
-                                <div class="input-group-prepend">
-                                    <button class="btn btn-secondary" type="button" v-on:click="offsetToFirst">First</button>
-                                    <button class="btn btn-secondary" type="button" v-on:click="offsetToPrev" v-bind:class="{ 'disabled': !scrollStatus }">&lt;</button>
-                                    <span class="input-group-text" v-bind:class="{ 'fp-auto-increment': isAutoUpdate }">
-                                        {{ eventsStartOffset }} - {{ eventsEndOffset }}
-                                    </span>
-                                </div>
-                                <input type="text" class="form-control" v-model="totalEventsSize" disabled>
-                                <div class="input-group-append">
-                                    <button class="btn btn-secondary" type="button" v-on:click="offsetToNext" v-bind:class="{ 'disabled': !scrollStatus }">&gt;</button>
-                                    <button class="btn btn-secondary" type="button" v-on:click="offsetToLast">Last</button>
-                                    <button class="btn btn-secondary" v-bind:class="{ 'btn-warning': isLockedToBottom,  }" type="button" v-on:click="toggleLockToBottom">
-                                        <i class="fas fa-lock-open" v-if="!isLockedToBottom"></i>
-                                        <i class="fas fa-lock" v-if="isLockedToBottom"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <fp-table :header-columns="['Event Time', 'Event Id', 'Event Name', 'Event Severity', 'Event Description']"
-                        :items="componentEvents"
+                        :items-key="'events'"
                         :item-to-columns="columnify"
                         :row-style="style"
                         :item-to-unique="keyify"
@@ -315,13 +319,6 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                         :filter-text="filterText"
                         :initial-views="itemsShown"
                         :compact="compact"
-                        :totalEventsSize="updateTotalEventsSize"
-                        :eventsStartOffset="eventsStartOffset"
-                        :eventsEndOffset="eventsEndOffset"
-                        :isAutoUpdate="isAutoUpdate"
-                        :toggleLockToBottom="toggleLockToBottom"
-                        :isLockedToBottom="isLockedToBottom"
-                        :scrollStatus="scrollStatus"
                     ></fp-table>
                 </div>
             </template>
@@ -337,7 +334,7 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                         <h2>Channels</h2>
                     </div>
                     <fp-table :header-columns="['Last Sample Time', 'Channel Id', 'Channel Name', 'Channel Value']"
-                         :items="conform"
+                         :items-key="'channels'"
                          :item-to-columns="columnify"
                          :item-to-unique="keyify"
                          :support-views="true"
@@ -389,14 +386,14 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                                         <span class="d-md-none d-lg-inline">Upload</span>
                                     </label>
                                 </div>
-                                <div class="col-md-4 mb-1" v-if="uplinking.running">
+                                <div class="col-md-4 mb-1" v-if="flags.uploading">
                                     <button type="button" class="btn btn-secondary btn-block"
                                     v-on:click="pauseUplink">
                                         <i class="fas fa-pause"></i>
                                         <span class="d-md-none d-lg-inline">Pause</span>
                                     </button>
                                 </div>
-                                <div class="col-md-4 mb-1" v-if="!uplinking.running">
+                                <div class="col-md-4 mb-1" v-if="!flags.uploading">
                                     <button type="button" class="btn btn-secondary btn-block"
                                     v-on:click="unpauseUplink">
                                         <i class="fas fa-play"></i>
@@ -409,7 +406,7 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                     <div v-if="error != null" class="alert alert-danger" role="alert">
                         {{ this.error }}
                         <button type="button" class="close" data-dismiss="alert" v-on:click="dismiss_alert()">
-                            <li class="fas fa-times" style="font-size: 0.75em"></i>
+                            <li class="fas fa-times" style="font-size: 0.75em"></li>
                         </button>
                     </div>
                     <fp-table :header-columns="['Start Time', 'End Time', 'Source', 'Destination', 'State', 'Control', 'Progress']"
@@ -504,13 +501,34 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
             -->
             <template id="fp-table-template">
                 <div class="fp-flex-repeater mt-2">
-                    <div class="row fp-flex-header no-gutters justify-content-end" v-if="!compact">
-                        <div class="mx-1">Filters:</div>
-                        <div class="ml-1 mb-2 col-4">
-                            <v-select id="fp-table-filter" :clearable="true" :searchable="true" :taggable="true"
-                                      :no-drop="true" :options="[]" :multiple="true"
-                                      v-model="matching">
-                            </v-select>
+                    <div class="row justify-content-end no-gutters" v-if="!compact">
+                        <div class="col-lg-4">
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <span class="input-group-text">Filters:</span>
+                                </div>
+                                <input class="form-control" type="text" v-model="matching" @input="onFilterInput" />
+                            </div>
+                        </div>
+                        <div class="col-lg-4" v-if="scroller != null">
+                            <div class="input-group mb-3">
+                                <div class="input-group-prepend">
+                                    <button class="btn btn-secondary" type="button" v-on:click="scroller.first()">First</button>
+                                    <button class="btn btn-secondary" type="button" v-on:click="scroller.prev()" v-bind:class="{ 'disabled': !scrollerData.status }">&lt;</button>
+                                    <span class="input-group-text" v-bind:class="{ 'fp-auto-increment': scrollerData.updating }">
+                                        {{ scrollerData.offset }} - {{ Math.min(scrollerData.offset + scrollerData.count, scrollerData.total)  }}
+                                    </span>
+                                </div>
+                                <input type="text" class="form-control" v-model="scrollerData.total" disabled>
+                                <div class="input-group-append">
+                                    <button class="btn btn-secondary" type="button" v-on:click="scroller.next()" v-bind:class="{ 'disabled': !scrollerData.status }">&gt;</button>
+                                    <button class="btn btn-secondary" type="button" v-on:click="scroller.last()">Last</button>
+                                    <button class="btn btn-secondary" v-bind:class="{ 'btn-warning': scrollerData.locked }" type="button" v-on:click="scroller.toggleLock()">
+                                        <i class="fas fa-lock-open" v-if="!scrollerData.locked"></i>
+                                        <i class="fas fa-lock" v-if="scrollerData.locked"></i>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="fp-scroll-container">
@@ -520,13 +538,13 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                                     <tr v-if="!compact">
                                         <th v-if="editing" class="sorttable_nosort">
                                             <input type="checkbox" v-on:input="checkAll" ref="allbox"
-                                                :checked="view.length == items.length">
+                                                :checked="view.length == itemsLength.length">
                                         </th>
                                         <th v-for="column in calculatedHeaderColumns">{{ column }}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr :is="displayTemplate" v-for="item in filteredItems" :item="item"
+                                    <tr :is="displayTemplate" v-for="item in postFiltered" :item="item"
                                         :item-to-columns="itemToColumns"
                                         :row-style="rowStyle"
                                         :key="itemToUnique(item)"
@@ -534,7 +552,6 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                                         :in-view="inView(item)"
                                         v-on:row-checked="checkedChild"
                                         :click-action="clickAction"
-                                        :all-items="filteredItems"
                                         :visible="visibleIndices"
                                     >
                                     </tr>
@@ -547,9 +564,13 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                         <div class="col-4"></div>
                         <div class="btn-group col-8 mb-1 mt-1 btn-group-sm">
                             <div type="button" class="btn btn-secondary" v-on:click="clearView">Clear</div>
-                            <a :href="viewHref" download="current-view.txt" class="btn btn-info">Export</a>
+                            <a :href="viewHref" download="current-view.txt" class="btn btn-info">
+                                <i class="fa fa-save"></i><span class="d-md-none d-lg-inline">Save</span>
+                            </a>
                             <label class="btn btn-info btn-file">
-                                Import<input type="file" v-on:input="readFile" style="display: none;">
+                                <i class="fa fa-folder-open"></i>
+                                <span class="d-md-none d-lg-inline">Load</span>
+                                <input type="file" v-on:input="readFile" style="display: none;">
                             </label>
                             <div type="button" class="btn btn-primary" v-on:click="saveView">Done</div>
                         </div>
@@ -559,7 +580,7 @@ Note: Vue.js annotations are used, as Vue is the data-to-view framework of choic
                                 v-on:click="editViews">Edit View</button>
                     </div>
                     <div class="row fp-flex-header no-gutters justify-content-end mb-1" v-if="!editing && !compact">
-                        <button class="col-3 btn btn-secondary" v-if="clearRows != null" v-on:click="clearRows">Clear</button>
+                        <button class="col-3 btn btn-secondary" v-if="clearRows != null" v-on:click="clearRows">Clear All</button>
                     </div>
                 </div>
             </template>
