@@ -134,7 +134,7 @@ class CmdData(sys_data.SysData):
 
         if verbose and csv:
             return "%s,%s,%s,%d,%s" % (time_str, raw_time_str, name, self.id, arg_str)
-        elif verbose and not csv:
+        elif verbose:
             return "%s: %s (%d) %s : %s" % (
                 time_str,
                 name,
@@ -142,7 +142,7 @@ class CmdData(sys_data.SysData):
                 raw_time_str,
                 arg_str,
             )
-        elif not verbose and csv:
+        elif csv:
             return f"{time_str},{name},{arg_str}"
         else:
             return f"{time_str}: {name} : {arg_str}"
@@ -170,9 +170,9 @@ class CmdData(sys_data.SysData):
             )
         if isinstance(arg_type, BoolType):
             value = str(arg_val).lower().strip()
-            if value in ("true", "yes"):
+            if value in {"true", "yes"}:
                 av = True
-            elif value in ("false", "no"):
+            elif value in {"false", "no"}:
                 av = False
             else:
                 raise CommandArgumentException("Argument value is not a valid boolean")
@@ -188,10 +188,7 @@ class CmdData(sys_data.SysData):
             arg_type.val = int(arg_val, 0) if isinstance(arg_val, str) else int(arg_val)
         elif isinstance(arg_type, StringType):
             arg_type.val = arg_val
-        # Cannot handle serializable or array argument inputs
-        elif isinstance(arg_type, (SerializableType, ArrayType)):
-            pass
-        else:
+        elif not isinstance(arg_type, (SerializableType, ArrayType)):
             raise CommandArgumentException(
                 "Argument value could not be converted to type object"
             )
