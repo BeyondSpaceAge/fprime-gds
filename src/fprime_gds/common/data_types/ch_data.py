@@ -135,7 +135,7 @@ class ChData(sys_data.SysData):
                 self.id,
                 ch_val,
             )
-        elif verbose and not csv:
+        elif verbose:
             return "%s: %s (%d) %s %s" % (
                 time_str_nice,
                 ch_name,
@@ -143,7 +143,7 @@ class ChData(sys_data.SysData):
                 raw_time_str,
                 ch_val,
             )
-        elif not verbose and csv:
+        elif csv:
             return f"{time_str_nice},{ch_name},{ch_val}"
         else:
             return f"{time_str_nice}: {ch_name} = {ch_val}"
