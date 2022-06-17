@@ -28,7 +28,6 @@ class PredicateTestCases(unittest.TestCase):
         try:
             pred.__str__()
             print(pred)
-            assert True, f"predicate provides string summary: {str(pred)}"
         except NotImplementedError:
             assert False, "invoking str(pred) was not supported"
 
@@ -69,7 +68,6 @@ class PredicateTestCases(unittest.TestCase):
             str(pred)
         except NotImplementedError:
             assert False, "invoking __str__ on an complete subclass of predicate failed"
-        assert True, "implemented predicate had no problems invoking functions"
 
     @staticmethod
     def test_is_predicate():
@@ -230,7 +228,7 @@ class PredicateTestCases(unittest.TestCase):
         n_list = [1, 2, 3, 4, 5, 6]
         assert pred(n_list), f"The list {n_list} should have been accepted"
 
-        for i in range(0, 10):
+        for i in range(10):
             n_list[0] = i
             assert pred(n_list), f"The list {n_list} should have been accepted"
         n_list[0] = -5

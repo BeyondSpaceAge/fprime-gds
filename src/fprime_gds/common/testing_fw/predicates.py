@@ -49,9 +49,8 @@ def is_predicate(pred):
     if callable(pred):
         sig = signature(pred.__call__)
         arg_count = len(sig.parameters)
-        if arg_count == 1:
-            if hasattr(pred, "__str__"):
-                return True
+        if arg_count == 1 and hasattr(pred, "__str__"):
+            return True
     return False
 
 
@@ -427,10 +426,7 @@ class args_predicate(predicate):
             actual = [actual]
         if len(actual) != len(self.arg_spec):
             return False
-        for i in range(len(self.arg_spec)):
-            if not self.arg_spec[i](actual[i]):
-                return False
-        return True
+        return all(self.arg_spec[i](actual[i]) for i in range(len(self.arg_spec)))
 
     def __str__(self):
         """
@@ -541,10 +537,12 @@ class telemetry_predicate(predicate):
         """
         if not isinstance(telemetry, ChData):
             return False
-        if self.id_pred(telemetry.get_id()):
-            if self.value_pred(telemetry.get_val()):
-                if self.time_pred(telemetry.get_time()):
-                    return True
+        if (
+            self.id_pred(telemetry.get_id())
+            and self.value_pred(telemetry.get_val())
+            and self.time_pred(telemetry.get_time())
+        ):
+            return True
         return False
 
     def __str__(self):
