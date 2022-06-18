@@ -61,7 +61,7 @@ def register_process_assassin(process, log=None):
             else:
                 process.kill(signal.SIGINT)
             time.sleep(1)
-        except (KeyboardInterrupt, OSError, InterruptedError):
+        except (KeyboardInterrupt, OSError):
             pass
         # Second attempt is to terminate with extreme prejudice. No process will survive this, ensuring that it is
         # really, really dead. Supports both pexpect and subprocess.
@@ -70,13 +70,13 @@ def register_process_assassin(process, log=None):
                 process.kill()
             else:
                 process.kill(signal.SIGKILL)
-        except (KeyboardInterrupt, OSError, InterruptedError):
+        except (KeyboardInterrupt, OSError):
             pass
         # Might as well close the log file because dead men tell no tales.
         try:
             if log is not None:
                 log.close()
-        except (KeyboardInterrupt, OSError, InterruptedError):
+        except (KeyboardInterrupt, OSError):
             pass
 
     atexit.register(assassin)
@@ -151,12 +151,8 @@ def find_app(root: Path) -> Path:
         print(f"[ERROR] binary location {bin_dir} does not exist")
         sys.exit(-1)
 
-    files = []
-    for child in bin_dir.iterdir():
-        if child.is_file():
-            files.append(child)
-
-    if len(files) == 0:
+    files = [child for child in bin_dir.iterdir() if child.is_file()]
+    if not files:
         print(f"[ERROR] App not found in {bin_dir}")
         sys.exit(-1)
 
@@ -176,12 +172,13 @@ def find_dict(root: Path) -> Path:
         print(f"[ERROR] dictionary location {dict_dir} does not exist")
         sys.exit(-1)
 
-    files = []
-    for child in dict_dir.iterdir():
-        if child.is_file() and child.suffix == ".xml":
-            files.append(child)
+    files = [
+        child
+        for child in dict_dir.iterdir()
+        if child.is_file() and child.suffix == ".xml"
+    ]
 
-    if len(files) == 0:
+    if not files:
         print(f"[ERROR] No xml dictionary found in dictionary location {dict_dir}")
         sys.exit(-1)
 

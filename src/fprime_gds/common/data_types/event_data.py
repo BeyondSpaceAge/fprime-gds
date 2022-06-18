@@ -107,9 +107,9 @@ class EventData(sys_data.SysData):
 
         if verbose and csv:
             return f"{time_str},{raw_time_str},{name},{self.id},{severity},{arg_str}"
-        elif verbose and not csv:
+        elif verbose:
             return f"{time_str}: {name} ({self.id}) {raw_time_str} {severity} : {arg_str}"
-        elif not verbose and csv:
+        elif csv:
             return f"{time_str},{name},{severity},{arg_str}"
         else:
             return f"{time_str}: {name} {severity} : {arg_str}"
