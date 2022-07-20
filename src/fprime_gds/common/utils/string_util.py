@@ -42,35 +42,33 @@ def format_string_template(format_str, given_values):
     """
 
     def convert(match_obj, ignore_int):
-        if match_obj.group() is not None:
-            flags, width, precision, length, conversion_type = match_obj.groups()
-            format_template = ""
-            if flags:
-                format_template += f"{flags}"
-            if width:
-                format_template += f"{width}"
-            if precision:
-                format_template += f"{precision}"
+        if match_obj.group() is None:
+            return match_obj
 
-            if conversion_type:
-                if any(
-                    [
-                        str(conversion_type).lower() == "f",
-                        str(conversion_type).lower() == "x",
-                        str(conversion_type).lower() == "o",
-                        str(conversion_type).lower() == "e",
-                    ]
-                ):
-                    format_template += f"{conversion_type}"
-                elif all([not ignore_int, str(conversion_type).lower() == "d"]):
-                    format_template += f"{conversion_type}"
+        flags, width, precision, length, conversion_type = match_obj.groups()
+        format_template = ""
+        if flags:
+            format_template += f"{flags}"
+        if width:
+            format_template += f"{width}"
+        if precision:
+            format_template += f"{precision}"
 
-            if format_template == "":
-                template = "{}"
-            else:
-                template = "{:" + format_template + "}"
-            return template
-        return match_obj
+        if conversion_type:
+            if any(
+                [
+                    str(conversion_type).lower() == "f",
+                    str(conversion_type).lower() == "x",
+                    str(conversion_type).lower() == "o",
+                    str(conversion_type).lower() == "e",
+                ]
+            ):
+                format_template += f"{conversion_type}"
+            elif all([not ignore_int, str(conversion_type).lower() == "d"]):
+                format_template += f"{conversion_type}"
+
+        template = "{}" if format_template == "" else "{:" + format_template + "}"
+        return template
 
     def convert_include_all(match_obj):
         return convert(match_obj, ignore_int=False)
@@ -97,8 +95,11 @@ def format_string_template(format_str, given_values):
         result = result.replace("%%", "%")
         return result
     except Exception as exc:
-        msg = "Value and format string do not match. "
-        msg += " Will ignore integer flags `d` in string template. "
+        msg = (
+            "Value and format string do not match. "
+            + " Will ignore integer flags `d` in string template. "
+        )
+
         msg += f"values: {values}. "
         msg += f"format_str: {format_str}. "
         msg += f"given_values: {given_values}"

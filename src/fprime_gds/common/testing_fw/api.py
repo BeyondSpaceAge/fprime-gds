@@ -190,7 +190,7 @@ class IntegrationTestAPI(DataHandler):
             self.event_history.clear()
             self.telemetry_history.clear()
             msg = "Clearing Test Histories"
-            
+
         self.__log(msg, TestLogger.WHITE)
         self.command_history.clear()
 
@@ -1241,8 +1241,6 @@ class IntegrationTestAPI(DataHandler):
         if predicate(value):
             ast_msg = f"{name} succeeded: {msg}\nassert {pred_msg}"
             self.__log(ast_msg, TestLogger.GREEN)
-            if not expect:
-                assert True, pred_msg
             return True
         else:
             ast_msg = f"{name} failed: {msg}\nassert {pred_msg}"
@@ -1263,7 +1261,8 @@ class IntegrationTestAPI(DataHandler):
             msg = f"Received EVR: {data.get_str(verbose=True)}"
             self.__log(msg, TestLogger.BLUE, sender="GDS")
         if self.last_evr is not None and data.get_time() < self.last_evr.get_time():
-            msg = "API detected out of order evrs!" + f"\nReceived First:{self.last_evr.get_str(verbose=True)}"
+            msg = f"API detected out of order evrs!\nReceived First:{self.last_evr.get_str(verbose=True)}"
+
             msg += f"\nReceived Second:{data.get_str(verbose=True)}"
             self.__log(msg, TestLogger.ORANGE)
         self.last_evr = data

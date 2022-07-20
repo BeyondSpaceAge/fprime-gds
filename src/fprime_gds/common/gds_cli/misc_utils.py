@@ -50,8 +50,7 @@ def repeat_until_interrupt(func: Callable, *args):
     """
     try:
         while True:
-            new_args = func(*args)  # lgtm [py/call/wrong-arguments]
-            if new_args:
+            if new_args := func(*args):
                 args = new_args
     except KeyboardInterrupt:
         pass
@@ -83,11 +82,7 @@ def get_item_string(item: SysData, as_json: bool = False) -> str:
     if not item:
         return ""
 
-    if as_json:
-        return get_item_json_string(item)
-    # NOTE: "get_str" isn't on the base sys_data class, but is on all the query
-    # items we care about so far (i.e. EventData, ChannelData, CommandData)
-    return item.get_str(verbose=True)
+    return get_item_json_string(item) if as_json else item.get_str(verbose=True)
 
 
 def get_cmd_template_string(
@@ -112,8 +107,7 @@ def get_cmd_template_string(
         len(item.get_args()),
     )
 
-    cmd_description = item.get_description()
-    if cmd_description:
+    if cmd_description := item.get_description():
         cmd_string += f"Description: {(cmd_description)}\n" 
 
     for arg in item.get_args():
