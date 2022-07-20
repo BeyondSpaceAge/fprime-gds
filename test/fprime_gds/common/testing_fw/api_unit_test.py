@@ -108,9 +108,8 @@ class APITestCases(unittest.TestCase):
         for item in items:
             if timestep:
                 time.sleep(timestep)
-            if isinstance(item, ChData) or isinstance(item, EventData):
-                if item.time == 0:
-                    item.time = self.t0 + time.time()
+            if isinstance(item, (ChData, EventData)) and item.time == 0:
+                item.time = self.t0 + time.time()
             callback(item)
 
     def fill_history_async(self, callback, items, timestep=1.0):
@@ -126,10 +125,10 @@ class APITestCases(unittest.TestCase):
         ), "the given list should have had the length {}, but instead had {}\nExpected {}\nActual{}".format(
             len(expected), len(actual), expected, actual
         )
-        for i in range(len(expected)):
+        for i, item in enumerate(expected):
             assert (
-                expected[i] == actual[i]
-            ), f"the {i} element of the expected list should be {expected[i]}, but was {actual[i]}."
+                item == actual[i]
+            ), f"the {i} element of the expected list should be {item}, but was {actual[i]}."
     
     def get_counter_sequence(self, length):
         seq = []
@@ -717,9 +716,9 @@ class APITestCases(unittest.TestCase):
         results = self.api.await_telemetry_sequence(search_seq)
 
         assert len(results) == len(search_seq), "lists should have the same length"
-        for i in range(len(results)):
-            msg = predicates.get_descriptive_string(results[i], search_seq[i])
-            assert search_seq[i](results[i]), msg
+        for i, item in enumerate(results):
+            msg = predicates.get_descriptive_string(item, search_seq[i])
+            assert search_seq[i](item), msg
 
         t1.join()
         t2.join()
