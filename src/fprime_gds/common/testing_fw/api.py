@@ -190,7 +190,7 @@ class IntegrationTestAPI(DataHandler):
             self.event_history.clear()
             self.telemetry_history.clear()
             msg = "Clearing Test Histories"
-            
+
         self.__log(msg, TestLogger.WHITE)
         self.command_history.clear()
 
@@ -1241,8 +1241,6 @@ class IntegrationTestAPI(DataHandler):
         if predicate(value):
             ast_msg = f"{name} succeeded: {msg}\nassert {pred_msg}"
             self.__log(ast_msg, TestLogger.GREEN)
-            if not expect:
-                assert True, pred_msg
             return True
         else:
             ast_msg = f"{name} failed: {msg}\nassert {pred_msg}"
