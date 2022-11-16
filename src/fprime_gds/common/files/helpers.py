@@ -46,9 +46,12 @@ class Timeout:
 
     def start(self):
         """Starts the timeout after a previous setup."""
-        assert self.__timer is None, "Timer already started, call restart() instead"
-        assert self.__callback is not None, "Setup timeout before calling start"
-        assert self.__timeout is not None, "Setup timeout before calling start"
+        if self.__timer is not None:
+            raise AssertionError("Timer already started, call restart() instead")
+        if self.__callback is None:
+            raise AssertionError("Setup timeout before calling start")
+        if self.__timeout is None:
+            raise AssertionError("Setup timeout before calling start")
         self.__timer = threading.Timer(self.__timeout, self.__callback, args=self.args)
         self.__timer.start()
 
@@ -134,7 +137,8 @@ class TransmitFile:
         """
         Opens the file descriptor and prepares it for uplink/downlink
         """
-        assert self.__fd is None, "Must close file before attempting to reopen it"
+        if self.__fd is not None:
+            raise AssertionError("Must close file before attempting to reopen it")
         self.__mode = mode
         if mode == TransmitFileState.WRITE:
             filepath = self.__destination
@@ -155,8 +159,10 @@ class TransmitFile:
 
     def read(self, chunk):
         """Read the chunk from the file"""
-        assert self.__fd is not None, "Must open file before reading"
-        assert self.__mode == TransmitFileState.READ, "Cannot read in WRITE mode"
+        if self.__fd is None:
+            raise AssertionError("Must open file before reading")
+        if self.__mode != TransmitFileState.READ:
+            raise AssertionError("Cannot read in WRITE mode")
         return self.__fd.read(chunk)
 
     def write(self, chunk, offset):
@@ -166,8 +172,10 @@ class TransmitFile:
         :param chunk: data to write to the file
         :param offset: offset to write to
         """
-        assert self.__fd is not None, "Must open file before writing"
-        assert self.__mode == TransmitFileState.WRITE, "Cannot write in READ mode"
+        if self.__fd is None:
+            raise AssertionError("Must open file before writing")
+        if self.__mode != TransmitFileState.WRITE:
+            raise AssertionError("Cannot write in READ mode")
         self.__fd.seek(offset)
         self.__fd.write(chunk)
 

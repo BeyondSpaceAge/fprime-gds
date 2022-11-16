@@ -166,9 +166,10 @@ class Distributor(DataHandler):
 
     def data_callback(self, data, sender=None):
         """Delegates to on_recv after checking data is binary"""
-        assert isinstance(
+        if not isinstance(
             data, (bytes, bytearray)
-        ), "Distributor must be registered to handle binary data only"
+        ):
+            raise AssertionError("Distributor must be registered to handle binary data only")
         return self.on_recv(data)
 
     def on_recv(self, data):
@@ -193,7 +194,8 @@ class Distributor(DataHandler):
         self.__buf.extend(data)
 
         (leftover_data, raw_msgs) = self.parse_into_raw_msgs_api(self.__buf)
-        assert leftover_data == self.__buf, "Leftover data is not equivalent to the remaining data in buffer"
+        if leftover_data != self.__buf:
+            raise AssertionError("Leftover data is not equivalent to the remaining data in buffer")
 
         for raw_msg in raw_msgs:
             (length, data_desc, msg) = self.parse_raw_msg_api(raw_msg)

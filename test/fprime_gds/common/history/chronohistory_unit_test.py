@@ -39,13 +39,15 @@ class HistoryTestCases(unittest.TestCase):
 
     @staticmethod
     def assert_lists_equal(expected, actual):
-        assert len(expected) == len(
+        if len(expected) != len(
             actual
-        ), f"the given list should have had the length {len(expected)}, but instead had {len(actual)}"
+        ):
+            raise AssertionError(f"the given list should have had the length {len(expected)}, but instead had {len(actual)}")
         for i, item in enumerate(expected):
-            assert (
-                item is actual[i]
-            ), f"the {i} element of the expected list should be {item}, but was {actual[i]}."
+            if (
+                item is not actual[i]
+            ):
+                raise AssertionError(f"the {i} element of the expected list should be {item}, but was {actual[i]}.")
 
     def test_push_and_retrieve(self):
         self.assert_lists_equal([], self.cHistory.retrieve())
@@ -123,12 +125,15 @@ class HistoryTestCases(unittest.TestCase):
         self.assert_lists_equal(tList[45:], self.cHistory.retrieve())
 
     def test_history_size(self):
-        assert self.cHistory.size() == 0, "starting history is empty"
+        if self.cHistory.size() != 0:
+            raise AssertionError("starting history is empty")
         for item in self.get_range(50):
             self.cHistory.data_callback(item)
-        assert self.cHistory.size() == 50, "starting history is empty"
+        if self.cHistory.size() != 50:
+            raise AssertionError("starting history is empty")
         self.cHistory.clear(25)
-        assert self.cHistory.size() == 25, "starting history is empty"
+        if self.cHistory.size() != 25:
+            raise AssertionError("starting history is empty")
 
     def test_history_retrieve_new(self):
         tList = []
@@ -194,12 +199,15 @@ class HistoryTestCases(unittest.TestCase):
         self.assert_lists_equal(tList, self.cHistory.retrieve_new())
 
     def test_history_length(self):
-        assert len(self.cHistory) == 0, "starting history is empty"
+        if len(self.cHistory) != 0:
+            raise AssertionError("starting history is empty")
         for item in self.get_range(50):
             self.cHistory.data_callback(item)
-        assert len(self.cHistory) == 50, "starting history is empty"
+        if len(self.cHistory) != 50:
+            raise AssertionError("starting history is empty")
         self.cHistory.clear(25)
-        assert len(self.cHistory) == 25, "starting history is empty"
+        if len(self.cHistory) != 25:
+            raise AssertionError("starting history is empty")
 
     def test_history_filter(self):
         class is_even(predicates.predicate):
@@ -214,14 +222,16 @@ class HistoryTestCases(unittest.TestCase):
         for item in self.get_range(50):
             self.cHistory.data_callback(item)
 
-        assert len(self.cHistory) == 25
+        if len(self.cHistory) != 25:
+            raise AssertionError
 
         correct_error = False
         try:
             ChronologicalHistory("Not a predicate")
         except TypeError:
             correct_error = True
-        assert correct_error, "The History should have raised a TypeError"
+        if not correct_error:
+            raise AssertionError("The History should have raised a TypeError")
 
 
 if __name__ == "__main__":

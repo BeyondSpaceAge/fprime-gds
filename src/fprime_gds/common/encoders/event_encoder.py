@@ -73,7 +73,8 @@ class EventEncoder(Encoder):
         Returns:
             Encoded version of the data argument as binary data
         """
-        assert isinstance(data, EventData), "Encoder handling incorrect type"
+        if not isinstance(data, EventData):
+            raise AssertionError("Encoder handling incorrect type")
         event_temp = data.get_template()
 
         self.desc_obj.val = DataDescType["FW_PACKET_LOG"].value

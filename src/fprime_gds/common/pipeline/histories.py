@@ -49,11 +49,12 @@ class Histories:
     @implementation.setter
     def implementation(self, implementation_type: Type[History]):
         """Set the implementation type"""
-        assert (
+        if not (
             self._command_hist is None
             and self._event_hist is None
             and self._channel_hist is None
-        ), "Cannot setup implementation types after setup"
+        ):
+            raise AssertionError("Cannot setup implementation types after setup")
         self._implementation_type = implementation_type
 
     @property
@@ -68,9 +69,10 @@ class Histories:
         """
         Set the events history
         """
-        assert (
-            self.coders is not None
-        ), "Cannot override history before calling 'setup_histories'"
+        if (
+            self.coders is None
+        ):
+            raise AssertionError("Cannot override history before calling 'setup_histories'")
         if self._event_hist is None:
             self.coders.remove_event_consumer(self._event_hist)
         self._event_hist = history
@@ -88,9 +90,10 @@ class Histories:
         """
         Set the channels history
         """
-        assert (
-            self.coders is not None
-        ), "Cannot override history before calling 'setup_histories'"
+        if (
+            self.coders is None
+        ):
+            raise AssertionError("Cannot override history before calling 'setup_histories'")
         if self._channel_hist is None:
             self.coders.remove_channel_consumer(self._channel_hist)
         self._channel_hist = history
@@ -108,9 +111,10 @@ class Histories:
         """
         Set the channels history
         """
-        assert (
-            self.coders is not None
-        ), "Cannot override history before calling 'setup_histories'"
+        if (
+            self.coders is None
+        ):
+            raise AssertionError("Cannot override history before calling 'setup_histories'")
         if self._command_hist is None:
             self.coders.remove_command_consumer(self._command_hist)
         self._command_hist = history

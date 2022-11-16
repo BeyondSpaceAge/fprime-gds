@@ -73,7 +73,8 @@ class PktEncoder(Encoder):
         Returns:
             Encoded version of the data argument as binary data
         """
-        assert isinstance(data, PktData), "Encoder handling incorrect type"
+        if not isinstance(data, PktData):
+            raise AssertionError("Encoder handling incorrect type")
         pkt_temp = data.get_template()
 
         self.desc_obj.val = DataDescType["FW_PACKET_PACKETIZED_TLM"].value

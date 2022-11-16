@@ -49,7 +49,8 @@ class ZmqWrapper(object):
             sub_topic: subscription topic used to filter incoming messages
             pub_topic: publication topic supplied for remote subscription filters
         """
-        assert len(transport_url) == 2, f"Must supply a pair of URLs for ZeroMQ not '{transport_url}'"
+        if len(transport_url) != 2:
+            raise AssertionError(f"Must supply a pair of URLs for ZeroMQ not '{transport_url}'")
         self.pub_topic = pub_topic
         self.sub_topic = sub_topic
         self.transport_url = transport_url
@@ -61,9 +62,10 @@ class ZmqWrapper(object):
         change functionality it provides to the caller. It just changes the call to connect/bind the connection to the
         network.
         """
-        assert (
+        if not (
             self.pub_topic is None and self.sub_topic is None
-        ), "Cannot make server after connect call"
+        ):
+            raise AssertionError("Cannot make server after connect call")
         self.server = True
 
     def connect_outgoing(self):
@@ -77,9 +79,12 @@ class ZmqWrapper(object):
         The connection is made using self.transport_url, and as such, this must be configured before running. This is
         intended to be called on the sending thread.
         """
-        assert self.transport_url is not None and len(self.transport_url) == 2, "Must configure before connecting"
-        assert self.zmq_socket_outgoing is None, "Cannot connect outgoing multiple times"
-        assert self.pub_topic is not None, "Must configure sockets before connecting"
+        if not (self.transport_url is not None and len(self.transport_url) == 2):
+            raise AssertionError("Must configure before connecting")
+        if self.zmq_socket_outgoing is not None:
+            raise AssertionError("Cannot connect outgoing multiple times")
+        if self.pub_topic is None:
+            raise AssertionError("Must configure sockets before connecting")
         self.zmq_socket_outgoing = self.context.socket(zmq.PUB)
         self.zmq_socket_outgoing.setsockopt(zmq.SNDHWM, 0)
         # When set to bind sockets, connect via a bind call
@@ -101,9 +106,12 @@ class ZmqWrapper(object):
         The connection is made using self.transport_url, and as such, this must be configured before running. This is
         intended to be called on the receiving thread.
         """
-        assert self.transport_url is not None and len(self.transport_url) == 2, "Must configure before connecting"
-        assert self.zmq_socket_incoming is None, "Cannot connect incoming multiple times"
-        assert self.sub_topic is not None, "Must configure sockets before connecting"
+        if not (self.transport_url is not None and len(self.transport_url) == 2):
+            raise AssertionError("Must configure before connecting")
+        if self.zmq_socket_incoming is not None:
+            raise AssertionError("Cannot connect incoming multiple times")
+        if self.sub_topic is None:
+            raise AssertionError("Must configure sockets before connecting")
         self.zmq_socket_incoming = self.context.socket(zmq.SUB)
         self.zmq_socket_incoming.setsockopt(zmq.RCVHWM, 0)
         self.zmq_socket_incoming.setsockopt(zmq.SUBSCRIBE, self.sub_topic)

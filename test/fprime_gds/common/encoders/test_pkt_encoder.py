@@ -52,12 +52,14 @@ def test_pkt_encoder():
 
     reg_output = enc.encode_api(pkt_obj)
 
-    assert (
-        reg_output == reg_expected
-    ), f"FAIL: expected regular output to be {list(reg_expected)}, but found {list(reg_output)}"
+    if (
+        reg_output != reg_expected
+    ):
+        raise AssertionError(f"FAIL: expected regular output to be {list(reg_expected)}, but found {list(reg_output)}")
 
     config_output = enc_config.encode_api(pkt_obj)
 
-    assert (
-        config_output == config_expected
-    ), f"FAIL: expected configured output to be {list(config_expected)}, but found {list(config_output)}"
+    if (
+        config_output != config_expected
+    ):
+        raise AssertionError(f"FAIL: expected configured output to be {list(config_expected)}, but found {list(config_output)}")

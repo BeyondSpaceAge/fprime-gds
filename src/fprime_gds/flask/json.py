@@ -35,7 +35,8 @@ def jsonify_base_type(input_type: Type[BaseType]) -> dict:
     Return:
         json-able dictionary representing the type
     """
-    assert issubclass(input_type, BaseType), "Failure to properly encode data"
+    if not issubclass(input_type, BaseType):
+        raise AssertionError("Failure to properly encode data")
     members = getmembers(input_type, lambda value: not isroutine(value) and not isinstance(value, property))
     jsonable_dict = {name: value for name, value in members if not name.startswith("_")}
     jsonable_dict.update({"name": input_type.__name__})
@@ -138,7 +139,8 @@ def time_type(obj):
     Returns:
         JSON compatible python anonymous type (dictionary)
     """
-    assert isinstance(obj, TimeType), "Incorrect type for serialization method"
+    if not isinstance(obj, TimeType):
+        raise AssertionError("Incorrect type for serialization method")
     return {
             "base": obj.timeBase.value,
             "context": obj.timeContext,

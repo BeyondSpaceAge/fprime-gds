@@ -103,7 +103,8 @@ class SerialAdapter(fprime_gds.common.communication.adapters.base.BaseAdapter):
                 self.open()
             written = self.serial.write(frame)
             # Not believed to be possible to not send everything without getting a timeout exception
-            assert written == len(frame)
+            if written != len(frame):
+                raise AssertionError
             return True
         except serial.serialutil.SerialException as exc:
             LOGGER.warning("Serial exception caught: %s. Reconnecting.", (str(exc)))

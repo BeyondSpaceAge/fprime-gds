@@ -62,7 +62,8 @@ class StandardPipeline:
         :param logging_prefix: logging prefix. Defaults to not logging at all.
         :param packet_spec: location of packetized telemetry XML specification.
         """
-        assert dictionary is not None and Path(dictionary).is_file(), f"Dictionary {dictionary} does not exist"
+        if not (dictionary is not None and Path(dictionary).is_file()):
+            raise AssertionError(f"Dictionary {dictionary} does not exist")
         # Loads the distributor and client socket
         self.distributor = fprime_gds.common.distributor.distributor.Distributor(config)
         self.client_socket = self.__transport_type()
@@ -93,9 +94,10 @@ class StandardPipeline:
     @transport_implementation.setter
     def transport_implementation(self, transport_type: Type[None]):
         """Set the implementation type for transport"""
-        assert (
-            self.client_socket is None
-        ), "Cannot setup transport implementation type after setup"
+        if (
+            self.client_socket is not None
+        ):
+            raise AssertionError("Cannot setup transport implementation type after setup")
         self.__transport_type = transport_type
 
     @classmethod

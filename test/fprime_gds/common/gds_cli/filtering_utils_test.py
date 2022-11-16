@@ -56,7 +56,8 @@ def sample_event(sample_template):
 )
 @pytest.mark.gds_cli
 def test_valid_accepting_filter(sample_event, accepting_input_filter):
-    assert accepting_input_filter(sample_event)
+    if not accepting_input_filter(sample_event):
+        raise AssertionError
 
 
 @pytest.mark.parametrize(
@@ -72,13 +73,15 @@ def test_valid_accepting_filter(sample_event, accepting_input_filter):
 )
 @pytest.mark.gds_cli
 def test_valid_rejecting_filter(sample_event, rejecting_input_filter):
-    assert not rejecting_input_filter(sample_event)
+    if rejecting_input_filter(sample_event):
+        raise AssertionError
 
 
 @pytest.mark.gds_cli
 def test_event_string_has_component(sample_event):
     component_filter = filtering_utils.contains_search_string("helmet")
-    assert component_filter(sample_event)
+    if not component_filter(sample_event):
+        raise AssertionError
 
 
 @pytest.mark.gds_cli
@@ -92,24 +95,30 @@ def test_string_filter_valid_function_passing(sample_event):
     function_filter = filtering_utils.contains_search_string(
         crazy_string, get_crazy_string
     )
-    assert not default_filter(sample_event)
-    assert function_filter(sample_event)
+    if default_filter(sample_event):
+        raise AssertionError
+    if not function_filter(sample_event):
+        raise AssertionError
 
 
 @pytest.mark.gds_cli
 def test_string_filter_case_sensitive(sample_event):
     upper_filter = filtering_utils.contains_search_string("Luggage_Combination")
     lower_filter = filtering_utils.contains_search_string("luggage_combination")
-    assert upper_filter(sample_event)
-    assert not lower_filter(sample_event)
+    if not upper_filter(sample_event):
+        raise AssertionError
+    if lower_filter(sample_event):
+        raise AssertionError
 
 
 @pytest.mark.gds_cli
 def test_search_predicate_case_sensitive(sample_event):
     upper_filter = filtering_utils.get_search_predicate("Luggage_Combination")
     lower_filter = filtering_utils.get_search_predicate("luggage_combination")
-    assert upper_filter(sample_event)
-    assert not lower_filter(sample_event)
+    if not upper_filter(sample_event):
+        raise AssertionError
+    if lower_filter(sample_event):
+        raise AssertionError
 
 
 @pytest.mark.gds_cli
@@ -118,8 +127,10 @@ def test_time_greater_than_predicate():
     time2 = time_type.TimeType(seconds=1593610856, useconds=223502)
 
     time_pred = predicates.greater_than(time1)
-    assert not time_pred(time1)
-    assert time_pred(time2)
+    if time_pred(time1):
+        raise AssertionError
+    if not time_pred(time2):
+        raise AssertionError
 
 
 @pytest.mark.gds_cli
@@ -134,7 +145,8 @@ def test_comparing_item_to_time_fails(sample_event):
 
     time_pred = predicates.greater_than(time)
     # This SHOULD return true, but it doesn't
-    assert not time_pred(sample_event)
+    if time_pred(sample_event):
+        raise AssertionError
 
 
 @pytest.mark.gds_cli
@@ -145,4 +157,5 @@ def test_comparing_item_to_converted_time_succeeds(sample_event):
     time_pred = predicates.greater_than(time)
     converted_time_pred = filtering_utils.time_to_data_predicate(time_pred)
     # Now, this returns the correct value
-    assert converted_time_pred(sample_event)
+    if not converted_time_pred(sample_event):
+        raise AssertionError

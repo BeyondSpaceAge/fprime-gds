@@ -90,12 +90,14 @@ class Dictionaries:
             command_loader = fprime_gds.common.loaders.cmd_xml_loader.CmdXmlLoader()
             self._command_id_dict = command_loader.get_id_dict(dictionary)
             self._command_name_dict = command_loader.get_name_dict(dictionary)
-            assert self._versions == command_loader.get_versions(), "Version mismatch while loading"
+            if self._versions != command_loader.get_versions():
+                raise AssertionError("Version mismatch while loading")
             # Channels
             channel_loader = fprime_gds.common.loaders.ch_xml_loader.ChXmlLoader()
             self._channel_id_dict = channel_loader.get_id_dict(dictionary)
             self._channel_name_dict = channel_loader.get_name_dict(dictionary)
-            assert self._versions == channel_loader.get_versions(), "Version mismatch while loading"
+            if self._versions != channel_loader.get_versions():
+                raise AssertionError("Version mismatch while loading")
         else:
             raise Exception(f"[ERROR] Dictionary '{dictionary}' does not exist.")
         # Check for packet specification
