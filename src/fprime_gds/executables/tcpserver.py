@@ -62,7 +62,7 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
     socketserver.StreamRequestHandler.allow_reuse_address = True
     socketserver.StreamRequestHandler.timeout = 1
 
-    def handle(self):  # on each client connect
+    def handle(self):    # on each client connect
         """
         The function that is invoked upon a new client.  This function listens
         for data on the socket.  Packets for now are assumed to be separated
@@ -75,16 +75,7 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
         self.name = b""
         self.id = 0
 
-        # print self.client_address, now()        # show this client's address
-        # Read the data from the socket
-        data = self.recv(13)
-
-        # Connection was closed by the client
-        if not data:
-            print("Client exited.")
-            return
-
-        else:
+        if data := self.recv(13):
             # Process the data into the cmdQueue
             self.getCmds(data)
 
@@ -97,6 +88,10 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
             else:
                 print("Unable to register client.")
                 return
+
+        else:
+            print("Client exited.")
+            return
 
         LOCK.acquire()
         del SERVER.dest_obj[self.name]
@@ -122,9 +117,7 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
             self.partial = b""
         if len(commands[-1]):
             self.partial = commands[-1]
-            self.cmdQueue.extend(commands[:-1])
-        else:
-            self.cmdQueue.extend(commands[:-1])
+        self.cmdQueue.extend(commands[:-1])
 
     def processQueue(self):
         for cmd in self.cmdQueue:
@@ -202,9 +195,9 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
         """
         Read l bytes from socket.
         """
-        chunk = b""
         msg = b""
         n = 0
+        chunk = b""
         while l > n:
             try:
                 chunk = self.request.recv(l - n)
@@ -221,10 +214,9 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
             except OSError as err:
                 if err.errno == errno.ECONNRESET:
                     print(
-                        "Socket error "
-                        + str(err.errno)
-                        + " (Connection reset by peer) occurred on recv()."
+                        f"Socket error {str(err.errno)} (Connection reset by peer) occurred on recv()."
                     )
+
                 else:
                     print(f"Socket error {str(err.errno)} occurred on recv().")
         return msg
@@ -260,9 +252,7 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
         FSW receives commands of various lengths.
         """
         data = b""
-        if header == b"List":
-            return b""
-        elif header == b"Quit":
+        if header in [b"List", b"Quit"]:
             return b""
         dst = header.split(b" ")[1].strip(b" ")
         if dst == b"FSW":
@@ -395,9 +385,7 @@ class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
         # Read telemetry data here...
         tlm_packet_size = packet[:4]
         size = struct.unpack(">I", tlm_packet_size)[0]
-        data = tlm_packet_size + packet[4 : 4 + size]
-
-        return data
+        return tlm_packet_size + packet[4 : 4 + size]
 
     def processNewPkt(self, header, data):
         """

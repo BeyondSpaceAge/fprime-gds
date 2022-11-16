@@ -97,8 +97,7 @@ class FileDownlinker(fprime_gds.common.handlers.DataHandler):
         )
         self.active.open(TransmitFileState.WRITE)
         LOGGER.addHandler(self.active.log_handler)
-        message = "Received START packet with metadata:\n"
-        message += "\tSize: %d\n"
+        message = "Received START packet with metadata:\n" + "\tSize: %d\n"
         message += "\tSource: %s\n"
         message += "\tDestination: %s"
         LOGGER.info(message, size, source_path, dest_path)
@@ -114,7 +113,6 @@ class FileDownlinker(fprime_gds.common.handlers.DataHandler):
         """
         # Initialize all relevant DATA packet attributes into variables from file_data
         offset = data.offset
-        data_bytes = data.dataVar
         if self.state != FileStates.RUNNING:
             LOGGER.warning("Received unexpected data packet for offset: %d", offset)
         else:
@@ -124,6 +122,7 @@ class FileDownlinker(fprime_gds.common.handlers.DataHandler):
                     self.sequence,
                     data.seqID,
                 )
+            data_bytes = data.dataVar
             # Write the data information to the file
             self.active.write(data_bytes, offset)
             self.active.seek = offset + len(data_bytes)

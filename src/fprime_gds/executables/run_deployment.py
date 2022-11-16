@@ -89,7 +89,7 @@ def launch_process(cmd, logfile=None, name=None, env=None, launch_time=5):
         try:
             if logfile is not None:
                 with open(logfile) as file_handle:
-                    for line in file_handle.readlines():
+                    for line in file_handle:
                         print(f"    [LOG] {line.strip()}", file=sys.stderr)
         except Exception:
             pass
@@ -291,10 +291,11 @@ def main():
         launchers.append(launch_comm)
 
     # Add app, if possible
-    if settings.get("app", None) is not None and settings.get("adapter", "") == "ip":
-        launchers.append(launch_app)
-    elif settings.get("app", None) is not None:
-        print("[WARNING] App cannot be auto-launched without IP adapter")
+    if settings.get("app", None) is not None:
+        if settings.get("adapter", "") == "ip":
+            launchers.append(launch_app)
+        else:
+            print("[WARNING] App cannot be auto-launched without IP adapter")
 
     # Launch the desired GUI package
     gui = settings.get("gui", "none")
