@@ -64,7 +64,7 @@ Vue.component("channel-table", {
          */
         columnify(item) {
             let template = _dictionaries.channels[item.id];
-            if (item.time == null || item.val == null) {
+            if (item.time === null || item.val === null) {
                 return ["", "0x" + item.id.toString(16), template.full_name, ""];
             }
             return [timeToString(item.datetime || item.time), "0x" + item.id.toString(16), template.full_name,
@@ -96,10 +96,10 @@ Vue.component("channel-table", {
             // Check bounds.
             for (let i = 0; i < bounds.length; i++) {
                 let bound = bounds[i];
-                if ((bound.bounds[0] != null && value < bound.bounds[0]) ||
-                    (bound.bounds[1] != null && value < bound.bounds[1])) {
+                if ((bound.bounds[0] !== null && value < bound.bounds[0]) ||
+                    (bound.bounds[1] !== null && value < bound.bounds[1])) {
                     return bound.class;
-                } else if (bound.bounds[0] != null || bound.bounds[1] != null) {
+                } else if (bound.bounds[0] !== null || bound.bounds[1] !== null) {
                     return "table-success";
                 }
             }
@@ -120,8 +120,8 @@ Vue.component("channel-table", {
          * @return {boolean}
          */
         channelHider(item) {
-            return item.val == null
-                || item.time == null
+            return item.val === null
+                || item.time === null
                 || listExistsAndItemNameNotInList(this.itemsShown, item);
         }
     }

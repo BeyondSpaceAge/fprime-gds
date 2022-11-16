@@ -280,7 +280,7 @@ export class ScrollHandler {
      * Un set the element for destruction time to cleanup the event listener.
      */
     unsetElement() {
-        if (this.element != null) {
+        if (this.element !== null) {
             this.element.removeEventListener('scroll', this.onScroll.bind(this));
             this.element = null;
         }

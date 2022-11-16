@@ -67,7 +67,7 @@ Vue.component("chart-wrapper", {
             loadTextFileInputData(event).then((data) => {
                 let splits = data.split(/\s/);
                 // Remove trailing blank chart if it exists and we are loading something to replace it
-                if (splits.length > 0 && this.wrappers.length > 0 && this.wrappers[this.wrappers.length - 1].selected == null) {
+                if (splits.length > 0 && this.wrappers.length > 0 && this.wrappers[this.wrappers.length - 1].selected === null) {
                     this.wrappers.splice(this.wrappers.length - 1, 1);
                 }
 
@@ -117,7 +117,7 @@ Vue.component("chart-display", {
         };
     },
     mounted() {
-        if (this.selected != null) {
+        if (this.selected !== null) {
             this.registerChart();
         }
     },
@@ -168,7 +168,7 @@ Vue.component("chart-display", {
          */
         destroy() {
             // Guard against destroying that which is destroyed
-            if (this.chart == null) {
+            if (this.chart === null) {
                 return;
             }
             _performance.removeCachingObject("Chart " + this.id);
@@ -194,7 +194,7 @@ Vue.component("chart-display", {
          * @param channels: new set of channels (unfiltered)
          */
         send(channels) {
-            if (this.selected == null || this.chart == null) {
+            if (this.selected === null || this.chart === null) {
                 return;
             }
             // Get channel name assuming the string is in component.channel format.

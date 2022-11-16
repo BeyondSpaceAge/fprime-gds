@@ -20,7 +20,7 @@ function command_assignment_helper(desired_command_name, desired_command_args, p
 
     // Keys should be exact matches
     let command_name = find_case_insensitive(desired_command_name, Object.keys(_datastore.commands));
-    if (command_name == null && typeof(partial_command) != "undefined") {
+    if (command_name === null && typeof(partial_command) != "undefined") {
         // Finally commands that "start with" after the component name "."
         let keys = Object.keys(_datastore.commands).filter(command_name => {
             let tokens = command_name.split(".");
@@ -29,7 +29,7 @@ function command_assignment_helper(desired_command_name, desired_command_args, p
         command_name = (keys.length > 0)? keys[0] : null;
     }
     // Command not found, return null
-    if (command_name == null) {
+    if (command_name === null) {
         return null;
     }
     let selected = _datastore.commands[command_name];
@@ -122,7 +122,7 @@ Vue.component("command-text", {
             // Get the expected text from the command and inject it into the box
             get: function () {
                 let tokens = [this.selected.full_name].concat(Array.from(this.selected.args,
-                    (arg) => {return (arg.type === "String" && arg.value != null) ? '"' + arg.value + '"' : arg.value}));
+                    (arg) => {return (arg.type === "String" && arg.value !== null) ? '"' + arg.value + '"' : arg.value}));
                 let cli = tokens.filter(val => {return val !== "";}).join(" ");
                 return cli;
             },
@@ -156,7 +156,7 @@ Vue.component("command-input", {
     },
     data: function() {
         let selected = command_assignment_helper(null, [], "CMD_NO_OP");
-        selected = (selected != null)? selected : Object.values(_datastore.commands)[0];
+        selected = (selected !== null)? selected : Object.values(_datastore.commands)[0];
         return {
             "commands": _datastore.commands,
             "loader": _loader,
@@ -193,7 +193,7 @@ Vue.component("command-input", {
 
             // Validate command exists in command dropdown
             let valid_name = find_case_insensitive(this.selected.full_name, Object.keys(_datastore.commands));
-            if (valid_name == null) {
+            if (valid_name === null) {
                 this.error = this.selected.full_name + " is not a command.";
                 valid = false;
             } else {
@@ -261,7 +261,7 @@ Vue.component("command-input", {
          */
         selectCmd(desired_command_name, desired_command_args) {
             let found_command = command_assignment_helper(desired_command_name, desired_command_args);
-            if (found_command != null) {
+            if (found_command !== null) {
                 this.selected = found_command;
             } else {
                 this.selected = {"full_name": desired_command_name, "args":[], "error": "Invalid command"};
