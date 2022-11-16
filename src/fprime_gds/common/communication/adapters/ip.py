@@ -14,8 +14,6 @@ import queue
 import socket
 import threading
 import time
-
-import fprime_gds.common.logger
 import fprime_gds.common.communication.adapters.base
 
 LOGGER = logging.getLogger("ip_adapter")
