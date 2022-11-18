@@ -370,8 +370,7 @@ class IntegrationTestAPI(DataHandler):
         self.send_command(command, args)
         if isinstance(channels, list):
             return self.await_telemetry_sequence(channels, start=start, timeout=timeout)
-        else:
-            return self.await_telemetry(channels, start=start, timeout=timeout)
+        return self.await_telemetry(channels, start=start, timeout=timeout)
 
     def send_and_await_event(self, command, args=None, events=None, timeout=5):
         """
@@ -398,8 +397,7 @@ class IntegrationTestAPI(DataHandler):
         self.send_command(command, args)
         if isinstance(events, list):
             return self.await_event_sequence(events, start=start, timeout=timeout)
-        else:
-            return self.await_event(events, start=start, timeout=timeout)
+        return self.await_event(events, start=start, timeout=timeout)
 
     ######################################################################################
     #   Command Asserts
@@ -431,8 +429,7 @@ class IntegrationTestAPI(DataHandler):
             return self.assert_telemetry_sequence(
                 channels, start=start, timeout=timeout
             )
-        else:
-            return self.assert_telemetry(channels, start=start, timeout=timeout)
+        return self.assert_telemetry(channels, start=start, timeout=timeout)
 
     def send_and_assert_event(self, command, args=None, events=None, timeout=5):
         """
@@ -458,8 +455,7 @@ class IntegrationTestAPI(DataHandler):
         self.send_command(command, args)
         if isinstance(events, list):
             return self.assert_event_sequence(events, start=start, timeout=timeout)
-        else:
-            return self.assert_event(events, start=start, timeout=timeout)
+        return self.assert_event(events, start=start, timeout=timeout)
 
     ######################################################################################
     #   Telemetry Functions
@@ -481,7 +477,7 @@ class IntegrationTestAPI(DataHandler):
             matching = [ch_dict[name].get_id() for name in ch_dict.keys() if name.endswith(f".{channel}")] 
             if channel in ch_dict:
                 return ch_dict[channel].get_id()
-            elif force_component or not matching:
+            if force_component or not matching:
                 msg = f"The telemetry mnemonic, {channel}, wasn't in the dictionary"
                 raise KeyError(msg)
             else:
@@ -703,7 +699,7 @@ class IntegrationTestAPI(DataHandler):
             matching = [event_dict[name].get_id() for name in event_dict.keys() if name.endswith(f".{event}")] 
             if event in event_dict:
                 return event_dict[event].get_id()
-            elif force_component or not matching:
+            if force_component or not matching:
                 msg = f"The event mnemonic, {event}, wasn't in the dictionary"
                 raise KeyError(msg)
             else:
@@ -1244,14 +1240,13 @@ class IntegrationTestAPI(DataHandler):
             if not expect:
                 assert True, pred_msg
             return True
+        ast_msg = f"{name} failed: {msg}\nassert {pred_msg}"
+        if not expect:
+            self.__log(ast_msg, TestLogger.RED)
+            assert False, pred_msg
         else:
-            ast_msg = f"{name} failed: {msg}\nassert {pred_msg}"
-            if not expect:
-                self.__log(ast_msg, TestLogger.RED)
-                assert False, pred_msg
-            else:
-                self.__log(ast_msg, TestLogger.ORANGE)
-            return False
+            self.__log(ast_msg, TestLogger.ORANGE)
+        return False
 
     def data_callback(self, data, sender=None):
         """

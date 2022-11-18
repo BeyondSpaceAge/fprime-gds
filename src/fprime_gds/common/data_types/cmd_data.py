@@ -134,7 +134,7 @@ class CmdData(sys_data.SysData):
 
         if verbose and csv:
             return "%s,%s,%s,%d,%s" % (time_str, raw_time_str, name, self.id, arg_str)
-        elif verbose and not csv:
+        if verbose and not csv:
             return "%s: %s (%d) %s : %s" % (
                 time_str,
                 name,
@@ -142,10 +142,9 @@ class CmdData(sys_data.SysData):
                 raw_time_str,
                 arg_str,
             )
-        elif not verbose and csv:
+        if not verbose and csv:
             return f"{time_str},{name},{arg_str}"
-        else:
-            return f"{time_str}: {name} : {arg_str}"
+        return f"{time_str}: {name} : {arg_str}"
 
     def process_args(self, input_values):
         """ Process input arguments """
