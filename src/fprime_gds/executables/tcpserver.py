@@ -306,7 +306,7 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
         for dest_elem in dest_list:
             # print "Locking TCP"
             LOCK.acquire()
-            if dest_elem in list(SERVER.dest_obj.keys()):
+            if dest_elem in list(SERVER.dest_obj):
                 # Send the message here....
                 # print "Sending TCP msg to ", dest_elem
 
@@ -410,7 +410,7 @@ class ThreadedUDPRequestHandler(socketserver.BaseRequestHandler):
             print(f"dest? {dst.decode(DATA_ENCODING)}")
         for dest_elem in dest_list:
             LOCK.acquire()
-            if dest_elem in list(SERVER.dest_obj.keys()):
+            if dest_elem in list(SERVER.dest_obj):
                 # Send the message here....
                 # print "Sending UDP msg to ", dest_elem
 
