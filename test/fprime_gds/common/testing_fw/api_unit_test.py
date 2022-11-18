@@ -120,9 +120,10 @@ class APITestCases(unittest.TestCase):
 
     @staticmethod
     def assert_lists_equal(expected, actual):
-        assert len(expected) == len(
+        if len(expected) != len(
             actual
-        ), f"the given list should have had the length {len(expected)}, but instead had {len(actual)}\nExpected {expected}\nActual{actual}"
+        ):
+            raise AssertionError(f"the given list should have had the length {len(expected)}, but instead had {len(actual)}\nExpected {expected}\nActual{actual}")
         for i, item in enumerate(expected):
             assert (
                 item == actual[i]
@@ -186,11 +187,13 @@ class APITestCases(unittest.TestCase):
         result = self.api.find_history_item(pred, self.tHistory)
         assert result == 25, f"The search should have returned 25, but found {result}"
         result = self.api.find_history_item(pred, self.tHistory, start=50)
-        assert result == 25, f"The search should have returned 25, but found {result}"
+        if result != 25:
+            raise AssertionError(f"The search should have returned 25, but found {result}")
         result = self.api.find_history_item(pred, self.tHistory, start=80)
-        assert (
-            result is None
-        ), f"The search should have returned None, but found {result}"
+        if (
+            result is not None
+        ):
+            raise AssertionError(f"The search should have returned None, but found {result}")
 
     def test_find_history_item_timeout(self):
         pred = predicates.equal_to(25)
@@ -391,23 +394,28 @@ class APITestCases(unittest.TestCase):
         msg = f"The event history should have been reduced by {iE} elements"
         assert sizeE - iE == eventHistory.size(), msg
         msg = "The element with the timestamp should be first in the history"
-        assert firstE is eventHistory[0], msg
+        if firstE is not eventHistory[0]:
+            raise AssertionError(msg)
         msg = f"The channel history should have been reduced by {iC} elements"
-        assert sizeC - iC == channelHistory.size(), msg
+        if sizeC - iC != channelHistory.size():
+            raise AssertionError(msg)
         msg = "The first element in the history should be the first with a valid time"
-        assert firstC is channelHistory[0], msg
+        if firstC is not channelHistory[0]:
+            raise AssertionError(msg)
 
         args1 = []
         self.api.send_command("apiTester.TEST_CMD_1", args1)
         assert commandHistory.size() > 0, "history size should be greater than 0"
         assert channelHistory.size() > 0, "history size should be greater than 0"
-        assert eventHistory.size() > 0, "history size should be greater than 0"
+        if eventHistory.size() <= 0:
+            raise AssertionError("history size should be greater than 0")
 
         self.api.clear_histories()
 
         assert commandHistory.size() == 0, "history size should be 0"
         assert channelHistory.size() == 0, "history size should be 0"
-        assert eventHistory.size() == 0, "history size should be 0"
+        if eventHistory.size() != 0:
+            raise AssertionError("history size should be 0")
 
     def test_registering_and_removing_subhistories(self):
         # Verifying that retrieving a subhistory for events behaves as expected
@@ -423,7 +431,8 @@ class APITestCases(unittest.TestCase):
         assert event_hist.size() == 2, "There should be two events in the api's history"
         assert event_subhist.size() == 1, "There should be one event in the subhistory"
 
-        assert self.api.remove_event_subhistory(event_subhist), "remove should succeed"
+        if not self.api.remove_event_subhistory(event_subhist):
+            raise AssertionError("remove should succeed")
 
         self.pipeline.enqueue_event(self.get_severity_event())
 
@@ -437,9 +446,10 @@ class APITestCases(unittest.TestCase):
         assert event_hist.size() == 0, "There should be no events in the api's history"
         assert event_subhist.size() == 1, "There should be one event in the subhistory"
 
-        assert not self.api.remove_event_subhistory(
+        if self.api.remove_event_subhistory(
             event_subhist
-        ), "should not remove twice"
+        ):
+            raise AssertionError("should not remove twice")
 
         # same checks, but for telemetry
         telem_seq = self.get_counter_sequence(3)
@@ -457,9 +467,10 @@ class APITestCases(unittest.TestCase):
         ), "There should be two updates in the api's history"
         assert telem_subhist.size() == 1, "There should be one update in the subhistory"
 
-        assert self.api.remove_telemetry_subhistory(
+        if not self.api.remove_telemetry_subhistory(
             telem_subhist
-        ), "remove should succeed"
+        ):
+            raise AssertionError("remove should succeed")
 
         self.pipeline.enqueue_telemetry(telem_seq[2])
 
@@ -473,27 +484,34 @@ class APITestCases(unittest.TestCase):
         assert telem_hist.size() == 0, "There should be no updates in the api's history"
         assert telem_subhist.size() == 1, "There should be one update in the subhistory"
 
-        assert not self.api.remove_telemetry_subhistory(
+        if self.api.remove_telemetry_subhistory(
             telem_subhist
-        ), "should not remove twice"
+        ):
+            raise AssertionError("should not remove twice")
 
     def test_translate_command_name(self):
         assert self.api.translate_command_name("apiTester.TEST_CMD_1") == 1
         assert self.api.translate_command_name("apiTester.TEST_CMD_2") == 2
-        assert self.api.translate_command_name("apiTester.TEST_CMD_3") == 3
-        assert self.api.translate_command_name(1) == 1
-        assert self.api.translate_command_name(2) == 2
-        assert self.api.translate_command_name(3) == 3
+        if self.api.translate_command_name("apiTester.TEST_CMD_3") != 3:
+            raise AssertionError
+        if self.api.translate_command_name(1) != 1:
+            raise AssertionError
+        if self.api.translate_command_name(2) != 2:
+            raise AssertionError
+        if self.api.translate_command_name(3) != 3:
+            raise AssertionError
         try:
             self.api.translate_command_name("DOES_NOT_EXIST")
             assert False, "the api should have raised a KeyError"
         except KeyError:
-            assert True, "the api raised the correct error"
+            if not True:
+                raise AssertionError("the api raised the correct error")
         try:
             self.api.translate_command_name(0)
             assert False, "the api should have raised a KeyError"
         except KeyError:
-            assert True, "the api raised the correct error"
+            if not True:
+                raise AssertionError("the api raised the correct error")
 
     def test_send_command(self):
         args1 = []
@@ -638,38 +656,50 @@ class APITestCases(unittest.TestCase):
     def test_translate_telemetry_name(self):
         assert self.api.translate_telemetry_name("apiTester.CommandCounter") == 1
         assert self.api.translate_telemetry_name("apiTester.Oscillator") == 2
-        assert self.api.translate_telemetry_name("apiTester.Counter") == 3
-        assert self.api.translate_telemetry_name(1) == 1
-        assert self.api.translate_telemetry_name(2) == 2
-        assert self.api.translate_telemetry_name(3) == 3
+        if self.api.translate_telemetry_name("apiTester.Counter") != 3:
+            raise AssertionError
+        if self.api.translate_telemetry_name(1) != 1:
+            raise AssertionError
+        if self.api.translate_telemetry_name(2) != 2:
+            raise AssertionError
+        if self.api.translate_telemetry_name(3) != 3:
+            raise AssertionError
         try:
             self.api.translate_telemetry_name("DOES_NOT_EXIST")
             assert False, "the api should have raised a KeyError"
         except KeyError:
-            assert True, "the api raised the correct error"
+            if not True:
+                raise AssertionError("the api raised the correct error")
         try:
             self.api.translate_telemetry_name(0)
             assert False, "the api should have raised a KeyError"
         except KeyError:
-            assert True, "the api raised the correct error"
+            if not True:
+                raise AssertionError("the api raised the correct error")
 
     def test_translate_telemetry_name_search(self):
         assert self.api.translate_telemetry_name("CommandCounter", force_component=False) == [1]
         assert self.api.translate_telemetry_name("Oscillator", force_component=False) == [2]
-        assert self.api.translate_telemetry_name("Counter", force_component=False) == [3, 4]
-        assert self.api.translate_telemetry_name(1, force_component=False) == 1
-        assert self.api.translate_telemetry_name(2, force_component=False) == 2
-        assert self.api.translate_telemetry_name(3, force_component=False) == 3
+        if self.api.translate_telemetry_name("Counter", force_component=False) != [3, 4]:
+            raise AssertionError
+        if self.api.translate_telemetry_name(1, force_component=False) != 1:
+            raise AssertionError
+        if self.api.translate_telemetry_name(2, force_component=False) != 2:
+            raise AssertionError
+        if self.api.translate_telemetry_name(3, force_component=False) != 3:
+            raise AssertionError
         try:
             self.api.translate_telemetry_name("DOES_NOT_EXIST", force_component=False)
             assert False, "the api should have raised a KeyError"
         except KeyError:
-            assert True, "the api raised the correct error"
+            if not True:
+                raise AssertionError("the api raised the correct error")
         try:
             self.api.translate_telemetry_name(0, force_component=False)
             assert False, "the api should have raised a KeyError"
         except KeyError:
-            assert True, "the api raised the correct error"
+            if not True:
+                raise AssertionError("the api raised the correct error")
 
     def test_get_telemetry_pred(self):
         pred = predicates.telemetry_predicate()
@@ -781,7 +811,8 @@ class APITestCases(unittest.TestCase):
         except AssertionError:
             assert True, "api raised the correct error"
         except self.AssertionFailure:
-            assert False, "api failed to raise an assertion error"
+            if not False:
+                raise AssertionError("api failed to raise an assertion error")
 
         self.api.clear_histories()
 
@@ -792,7 +823,8 @@ class APITestCases(unittest.TestCase):
         except AssertionError:
             assert True, "api raised the correct error"
         except self.AssertionFailure:
-            assert False, "api failed to raise an assertion error"
+            if not False:
+                raise AssertionError("api failed to raise an assertion error")
 
     def test_assert_telemetry_sequence(self):
         count_seq = self.get_counter_sequence(20)
@@ -815,7 +847,8 @@ class APITestCases(unittest.TestCase):
         except AssertionError:
             assert True, "api raised the correct error"
         except self.AssertionFailure:
-            assert False, "api failed to raise an assertion error"
+            if not False:
+                raise AssertionError("api failed to raise an assertion error")
 
         self.api.clear_histories()
 
@@ -827,7 +860,8 @@ class APITestCases(unittest.TestCase):
         except AssertionError:
             assert True, "api raised the correct error"
         except self.AssertionFailure:
-            assert False, "api failed to raise an assertion error"
+            if not False:
+                raise AssertionError("api failed to raise an assertion error")
 
     def test_assert_telemetry_count(self):
         count_seq = self.get_counter_sequence(20)
@@ -855,7 +889,8 @@ class APITestCases(unittest.TestCase):
         except AssertionError:
             assert True, "api raised the correct error"
         except self.AssertionFailure:
-            assert False, "api failed to raise an assertion error"
+            if not False:
+                raise AssertionError("api failed to raise an assertion error")
 
         self.api.clear_histories()
 
@@ -867,55 +902,76 @@ class APITestCases(unittest.TestCase):
         except AssertionError:
             assert True, "api raised the correct error"
         except self.AssertionFailure:
-            assert False, "api failed to raise an assertion error"
+            if not False:
+                raise AssertionError("api failed to raise an assertion error")
 
     def test_translate_event_name(self):
         assert self.api.translate_event_name("apiTester.CommandReceived") == 1
         assert self.api.translate_event_name("apiTester.HistorySizeUpdate") == 2
-        assert self.api.translate_event_name("apiTester.SeverityCOMMAND") == 3
-        assert self.api.translate_event_name("apiTester.SeverityACTIVITY_LO") == 4
-        assert self.api.translate_event_name("apiTester.SeverityACTIVITY_HI") == 5
-        assert self.api.translate_event_name("apiTester.SeverityWARNING_LO") == 6
-        assert self.api.translate_event_name("apiTester.SeverityWARNING_HI") == 7
-        assert self.api.translate_event_name("apiTester.SeverityDIAGNOSTIC") == 8
-        assert self.api.translate_event_name("apiTester.SeverityFATAL") == 9
+        if self.api.translate_event_name("apiTester.SeverityCOMMAND") != 3:
+            raise AssertionError
+        if self.api.translate_event_name("apiTester.SeverityACTIVITY_LO") != 4:
+            raise AssertionError
+        if self.api.translate_event_name("apiTester.SeverityACTIVITY_HI") != 5:
+            raise AssertionError
+        if self.api.translate_event_name("apiTester.SeverityWARNING_LO") != 6:
+            raise AssertionError
+        if self.api.translate_event_name("apiTester.SeverityWARNING_HI") != 7:
+            raise AssertionError
+        if self.api.translate_event_name("apiTester.SeverityDIAGNOSTIC") != 8:
+            raise AssertionError
+        if self.api.translate_event_name("apiTester.SeverityFATAL") != 9:
+            raise AssertionError
         for i in range(1, 10):
-            assert self.api.translate_event_name(i) == i
+            if self.api.translate_event_name(i) != i:
+                raise AssertionError
 
         try:
             self.api.translate_event_name("DOES_NOT_EXIST")
             assert False, "the api should have raised a KeyError"
         except KeyError:
-            assert True, "the api raised the correct error"
+            if not True:
+                raise AssertionError("the api raised the correct error")
         try:
             self.api.translate_event_name(0)
             assert False, "the api should have raised a KeyError"
         except KeyError:
-            assert True, "the api raised the correct error"
+            if not True:
+                raise AssertionError("the api raised the correct error")
 
     def test_translate_event_name_search(self):
         assert self.api.translate_event_name("CommandReceived", force_component=False) == [1]
         assert self.api.translate_event_name("HistorySizeUpdate", force_component=False) == [2]
-        assert self.api.translate_event_name("SeverityCOMMAND", force_component=False) == [3]
-        assert self.api.translate_event_name("SeverityACTIVITY_LO", force_component=False) == [4]
-        assert self.api.translate_event_name("SeverityACTIVITY_HI", force_component=False) == [5]
-        assert self.api.translate_event_name("SeverityWARNING_LO", force_component=False) == [6]
-        assert self.api.translate_event_name("SeverityWARNING_HI", force_component=False) == [7]
-        assert self.api.translate_event_name("SeverityDIAGNOSTIC", force_component=False) == [8]
-        assert self.api.translate_event_name("SeverityFATAL", force_component=False) == [9, 10]
+        if self.api.translate_event_name("SeverityCOMMAND", force_component=False) != [3]:
+            raise AssertionError
+        if self.api.translate_event_name("SeverityACTIVITY_LO", force_component=False) != [4]:
+            raise AssertionError
+        if self.api.translate_event_name("SeverityACTIVITY_HI", force_component=False) != [5]:
+            raise AssertionError
+        if self.api.translate_event_name("SeverityWARNING_LO", force_component=False) != [6]:
+            raise AssertionError
+        if self.api.translate_event_name("SeverityWARNING_HI", force_component=False) != [7]:
+            raise AssertionError
+        if self.api.translate_event_name("SeverityDIAGNOSTIC", force_component=False) != [8]:
+            raise AssertionError
+        if self.api.translate_event_name("SeverityFATAL", force_component=False) != [9, 10]:
+            raise AssertionError
         for i in range(1, 11):
-            assert self.api.translate_event_name(i, force_component=False) == i
+            if self.api.translate_event_name(i, force_component=False) != i:
+                raise AssertionError
 
         try:
             self.api.translate_event_name("DOES_NOT_EXIST", force_component=False)
             assert False, "the api should have raised a KeyError"
         except KeyError:
-            assert True, "the api raised the correct error"
+            if not True:
+                raise AssertionError("the api raised the correct error")
         try:
             self.api.translate_event_name(0, force_component=False)
             assert False, "the api should have raised a KeyError"
         except KeyError:
-            assert True, "the api raised the correct error"
+            if not True:
+                raise AssertionError("the api raised the correct error")
 
     def test_get_event_pred(self):
         pred = predicates.event_predicate()

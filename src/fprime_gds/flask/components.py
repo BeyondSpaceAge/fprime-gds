@@ -132,7 +132,8 @@ def setup_pipelined_components(
         )
         pipeline.connect(connection_uri)
         __PIPELINE = pipeline
-    assert __PIPELINE is not None, "Main thread did not setup pipeline appropriately"
+    if __PIPELINE is None:
+        raise AssertionError("Main thread did not setup pipeline appropriately")
     return __PIPELINE
 
 
@@ -142,5 +143,6 @@ def get_pipelined_components():
 
     :return: F prime pipeline
     """
-    assert __PIPELINE is not None, "Pipeline must be setup before use"
+    if __PIPELINE is None:
+        raise AssertionError("Pipeline must be setup before use")
     return __PIPELINE

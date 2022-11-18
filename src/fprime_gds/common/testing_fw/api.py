@@ -150,7 +150,8 @@ class IntegrationTestAPI(DataHandler):
             self.__log(ast_msg, fail_color)
 
         if not expect:
-            assert value, ast_msg
+            if not value:
+                raise AssertionError(ast_msg)
         return value
 
     def predicate_assert(self, predicate, value, msg="", expect=False):
@@ -1242,13 +1243,15 @@ class IntegrationTestAPI(DataHandler):
             ast_msg = f"{name} succeeded: {msg}\nassert {pred_msg}"
             self.__log(ast_msg, TestLogger.GREEN)
             if not expect:
-                assert True, pred_msg
+                if not True:
+                    raise AssertionError(pred_msg)
             return True
         else:
             ast_msg = f"{name} failed: {msg}\nassert {pred_msg}"
             if not expect:
                 self.__log(ast_msg, TestLogger.RED)
-                assert False, pred_msg
+                if not False:
+                    raise AssertionError(pred_msg)
             else:
                 self.__log(ast_msg, TestLogger.ORANGE)
             return False

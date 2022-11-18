@@ -69,7 +69,8 @@ class ChEncoder(Encoder):
         Returns:
             Encoded version of the data argument as binary data
         """
-        assert isinstance(data, ChData), "Encoder handling incorrect type"
+        if not isinstance(data, ChData):
+            raise AssertionError("Encoder handling incorrect type")
         ch_temp = data.get_template()
 
         self.desc_obj.val = DataDescType["FW_PACKET_TELEM"].value

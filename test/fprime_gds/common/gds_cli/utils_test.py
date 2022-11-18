@@ -40,7 +40,8 @@ def test_repeat_exits_at_counter():
 
     misc_utils.repeat_until_interrupt(increment_with_interrupt, 0, 3, increment_count)
 
-    assert count == 3
+    if count != 3:
+        raise AssertionError
 
 
 @pytest.mark.gds_cli
@@ -58,7 +59,8 @@ def test_repeat_with_void_function_valid():
 
     misc_utils.repeat_until_interrupt(exit_at_value, 5)
 
-    assert count == 5
+    if count != 5:
+        raise AssertionError
 
 
 @pytest.mark.gds_cli
@@ -77,7 +79,8 @@ def test_repeat_with_no_arg_void_function_valid():
 
     misc_utils.repeat_until_interrupt(exit_when_3)
 
-    assert count == 3
+    if count != 3:
+        raise AssertionError
 
 
 @pytest.mark.gds_cli
@@ -169,16 +172,21 @@ def t2d(template: DataTemplate) -> SysData:
 
 
 def assert_equal_template_dictionaries(dict1, dict2):
-    assert dict1.keys() == dict2.keys()
+    if dict1.keys() != dict2.keys():
+        raise AssertionError
     for key in dict1:
-        assert dict1[key].get_id() == dict2[key].get_id()
-        assert dict1[key].get_name() == dict2[key].get_name()
+        if dict1[key].get_id() != dict2[key].get_id():
+            raise AssertionError
+        if dict1[key].get_name() != dict2[key].get_name():
+            raise AssertionError
 
 
 def assert_equal_data_lists(list1, list2):
-    assert len(list1) == len(list2)
+    if len(list1) != len(list2):
+        raise AssertionError
     for item1, item2 in zip(list1, list2):
-        assert item1.get_id() == item2.get_id()
+        if item1.get_id() != item2.get_id():
+            raise AssertionError
 
 
 @pytest.mark.gds_cli
@@ -234,7 +242,8 @@ def test_get_empty_item_list_with_unused_id(item_template_dictionary):
         template_to_data=t2d,
     )
 
-    assert item_list == []
+    if item_list != []:
+        raise AssertionError
     # Check nothing changed in the original dictionary
     assert_equal_template_dictionaries(item_template_dictionary, original_dict)
 
@@ -245,4 +254,5 @@ def test_get_item_list_with_empty_item_dictionary():
         item_dictionary={}, search_filter=predicates.always_true(), template_to_data=t2d
     )
 
-    assert item_list == []
+    if item_list != []:
+        raise AssertionError

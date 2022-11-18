@@ -91,9 +91,10 @@ class TransportClient(DataHandler, HandlerRegistrar, ABC):
 
     def data_callback(self, data, sender=None):
         """Calls send to send received data"""
-        assert isinstance(
+        if not isinstance(
             data, (bytes, bytearray)
-        ), "Client cannot handle non-binary data callbacks"
+        ):
+            raise AssertionError("Client cannot handle non-binary data callbacks")
         self.send(data)
 
 
@@ -236,7 +237,8 @@ class ThreadedTCPSocketClient(ThreadedTransportClient):
         Arguments:
             data {binary} -- the data to send (What you want the destination to receive)
         """
-        assert self.dest is not None, "Cannot send data before connect call"
+        if self.dest is None:
+            raise AssertionError("Cannot send data before connect call")
         self.sock.send(b"A5A5 %s %s" % (self.dest, data))
 
     def recv(self, timeout=100):
@@ -248,6 +250,7 @@ class ThreadedTCPSocketClient(ThreadedTransportClient):
         Args:
             timeout {int}: timeout to wait for the socket to have data before returning b"". Default: 100ms.
         """
-        assert self.dest is not None, "Cannot recv data before connect call"
+        if self.dest is None:
+            raise AssertionError("Cannot recv data before connect call")
         ready = select.select([self.sock], [], [], timeout)
         return self.sock.recv(self.chunk_size) if ready[0] else b""

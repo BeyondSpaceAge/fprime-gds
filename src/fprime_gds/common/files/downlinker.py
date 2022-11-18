@@ -88,7 +88,8 @@ class FileDownlinker(fprime_gds.common.handlers.DataHandler):
             LOGGER.warning("File transfer already inprogress. Aborting original.")
             self.finish()
         # Create the destination file where the DATA packet data will be stored
-        assert self.active is None, "File is already open, something went wrong"
+        if self.active is not None:
+            raise AssertionError("File is already open, something went wrong")
         self.active = TransmitFile(
             source_path,
             os.path.join(self.__directory, self.sanitize(dest_path)),
