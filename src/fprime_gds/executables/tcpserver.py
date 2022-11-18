@@ -122,9 +122,7 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
             self.partial = b""
         if len(commands[-1]):
             self.partial = commands[-1]
-            self.cmdQueue.extend(commands[:-1])
-        else:
-            self.cmdQueue.extend(commands[:-1])
+        self.cmdQueue.extend(commands[:-1])
 
     def processQueue(self):
         for cmd in self.cmdQueue:
@@ -221,9 +219,7 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
             except OSError as err:
                 if err.errno == errno.ECONNRESET:
                     print(
-                        "Socket error "
-                        + str(err.errno)
-                        + " (Connection reset by peer) occurred on recv()."
+                        f"Socket error {str(err.errno)} (Connection reset by peer) occurred on recv()."
                     )
                 else:
                     print(f"Socket error {str(err.errno)} occurred on recv().")
@@ -237,11 +233,7 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
         header = self.recv(5)
 
         if len(header) == 0:
-            print(
-                "Header information is empty, client "
-                + self.name.decode(DATA_ENCODING)
-                + " exiting."
-            )
+            print(f"Header information is empty, client {self.name.decode(DATA_ENCODING)} exiting.")
             return header
         if header == b"List\n":
             return b"List"
@@ -260,9 +252,7 @@ class ThreadedTCPRequestHandler(socketserver.StreamRequestHandler):
         FSW receives commands of various lengths.
         """
         data = b""
-        if header == b"List":
-            return b""
-        elif header == b"Quit":
+        if header in [b"List", b"Quit"]:
             return b""
         dst = header.split(b" ")[1].strip(b" ")
         if dst == b"FSW":

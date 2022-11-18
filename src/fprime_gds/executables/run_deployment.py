@@ -4,8 +4,8 @@
 # Runs a deployment. Starts a GUI, a TCPServer, and the deployment application.
 ####
 import os
-import sys
 import platform
+import sys
 import webbrowser
 from pathlib import Path
 
@@ -89,7 +89,7 @@ def launch_process(cmd, logfile=None, name=None, env=None, launch_time=5):
         try:
             if logfile is not None:
                 with open(logfile) as file_handle:
-                    for line in file_handle.readlines():
+                    for line in file_handle:
                         print(f"    [LOG] {line.strip()}", file=sys.stderr)
         except Exception:
             pass
@@ -170,13 +170,14 @@ def launch_wx(port, dictionary, connect_address, log_dir, config, **_):
 
 
 def launch_html(
-    tts_port, dictionary, connect_address, logs, gui_addr, gui_port, **extras
+    tts_port, dictionary, packet_spec, connect_address, logs, gui_addr, gui_port, **extras
 ):
     """
     Launch the flask server and a browser pointed at the HTML page.
 
     :param tts_port: port to connect to
     :param dictionary: dictionary to look at
+    :param packet_spec: packet specification
     :param connect_address: address to connect to
     :param logs: directory to place logs
     :param gui_addr: Flask server host IP address
@@ -187,6 +188,7 @@ def launch_html(
     gse_env.update(
         {
             "DICTIONARY": str(dictionary),
+            "PACKET_SPEC": str(packet_spec),
             "FLASK_APP": "fprime_gds.flask.app",
             "LOG_DIR": logs,
             "SERVE_LOGS": "YES",
@@ -291,10 +293,11 @@ def main():
         launchers.append(launch_comm)
 
     # Add app, if possible
-    if settings.get("app", None) is not None and settings.get("adapter", "") == "ip":
-        launchers.append(launch_app)
-    elif settings.get("app", None) is not None:
-        print("[WARNING] App cannot be auto-launched without IP adapter")
+    if settings.get("app", None) is not None:
+        if settings.get("adapter", "") == "ip":
+            launchers.append(launch_app)
+        else:
+            print("[WARNING] App cannot be auto-launched without IP adapter")
 
     # Launch the desired GUI package
     gui = settings.get("gui", "none")
@@ -302,8 +305,6 @@ def main():
         launchers.append(launch_wx)
     elif gui in ["html", "none"]:
         launchers.append(launch_html)
-    # elif gui == "none":
-    #    print("[WARNING] No GUI specified, running headless", file=sys.stderr)
     else:
         raise Exception(f'Invalid GUI specified: {settings["gui"]}')
     # Launch launchers and wait for the last app to finish
