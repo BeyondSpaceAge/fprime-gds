@@ -88,7 +88,7 @@ Vue.component("fp-row", {
             if (typeof (this.itemToColumns) !== "function") {
                 throw Error("Failed to define required 'itemToColumns' function on fp-table")
             }
-            return this.itemToColumns(this.item).filter((item, index) => this.visible == null || this.visible.indexOf(index) !== -1);
+            return this.itemToColumns(this.item).filter((item, index) => this.visible === null || this.visible.indexOf(index) !== -1);
         },
         /**
          * Calculates the style of the row based on a given item. This is optional and will not raise an error if the
@@ -421,7 +421,7 @@ Vue.component("fp-table", {
 
         scroll(items) {
             // No scrolling, bail
-            if (this.scroller == null) {
+            if (this.scroller === null) {
                 return items;
             }
             this.scroller.updateData(items);
@@ -503,9 +503,9 @@ Vue.component("fp-table", {
     computed: {
 
         postFiltered() {
-            if (this.itemsKey != null) {
+            if (this.itemsKey !== null) {
                 return this.displayed;
-            } else if (this.items != null) {
+            } else if (this.items !== null) {
                 return this.scroll(this.filter(this.items));
             } else {
                 console.error("items and itemsKey is not defined")
@@ -521,7 +521,7 @@ Vue.component("fp-table", {
          * @return {null|Uint8Array}
          */
         visibleIndices: function() {
-            if (this.fields == null || this.fields.length === 0) {
+            if (this.fields === null || this.fields.length === 0) {
                 return null;
             }
             return this.fields.map(field => this.headerColumns.indexOf(field)).filter(index => index !== -1);
@@ -536,7 +536,7 @@ Vue.component("fp-table", {
          */
         calculatedHeaderColumns: function() {
             // Check for null full-display
-            if (this.fields == null || this.fields.length === 0) {
+            if (this.fields === null || this.fields.length === 0) {
                 return this.headerColumns;
             }
             return this.fields.filter(field => this.headerColumns.indexOf(field) !== -1);
@@ -578,7 +578,7 @@ Vue.component("fp-table", {
         // Set and handle the element post-render as this will fail if not rendered
         this.$nextTick(function(e) {
             let element = this.$el.querySelector("#fp-scrollable-id");
-            if (element != null) {
+            if (element !== null) {
                 this.scroller.setElement(element);
             }
         });
@@ -588,7 +588,7 @@ Vue.component("fp-table", {
      */
     beforeDestroy: function() {
         // Check scrolling control and setup
-        if (this.scroller != null) {
+        if (this.scroller !== null) {
             this.scroller.unsetElement();
         }
     }
