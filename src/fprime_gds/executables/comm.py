@@ -27,11 +27,7 @@ try:
     from fprime_gds.common.zmq_transport import ZmqGround
 except ImportError:
     ZmqGround = None
-import fprime_gds.common.communication.adapters.base
-import fprime_gds.common.communication.checksum
 import fprime_gds.common.communication.ground
-import fprime_gds.common.communication.adapters.ip
-import fprime_gds.common.logger
 import fprime_gds.executables.cli
 
 from fprime_gds.common.communication.framing import FpFramerDeframer
